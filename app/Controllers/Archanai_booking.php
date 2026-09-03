@@ -583,6 +583,57 @@ class Archanai_booking extends BaseController
 				}
 				$msg_data['pay_status'] = false;
 				$msg_data['payment_key'] = $payment_key;
+			} elseif ($payment_key == 'eghl_qr') {
+				try {
+					if (empty(EGHL_MERCHANTID) || empty(EGHL_TERMINALID)) {
+						throw new \RuntimeException('EGHL credentials are not configured.');
+					}
+
+					$pay_amount = EGHL_TEST ? 1 : bcdiv($tot_amt, '1', 2);
+
+					$txnPMT = new \App\Libraries\MahJsonAPI(EGHL_SERVER_CERT_PATH, EGHL_CLIENT_KEY_PATH);
+					$txnPMT->Amount = $pay_amount;
+					$txnPMT->setNewRetTxnRef(EGHL_PREFIX . '_ARCH_' . $arch_book_id);
+					$txnPMT->MerchantID = EGHL_MERCHANTID;
+					$txnPMT->OperatorID = 'SALE';
+					$txnPMT->TerminalID = $this->resolveEghlTerminalId();
+					$txnPMT->ProductCode = 'DUITNOWDQR';
+
+					$raw_response = $txnPMT->paymentAsynchronous();
+					if ($raw_response === 'Invalid signature') {
+						throw new \RuntimeException('EGHL response failed signature verification.');
+					}
+					$eghl_response = json_decode($raw_response);
+
+					if (!empty($eghl_response->msg->DisplayInfo[0]->Value)) {
+						$this->db->table('archanai_payment_gateway_datas')
+							->where('id', $archanai_payment_gateway_id)
+							->update(['request_data' => json_encode($eghl_response)]);
+
+						$msg_data['qr_code'] = $eghl_response->msg->DisplayInfo[0]->Value; // base64 PNG
+						$msg_data['total_amount'] = $pay_amount;
+						$msg_data['pay_status'] = false;
+						$msg_data['payment_key'] = $payment_key;
+					} else {
+						$error_code = $eghl_response->msg->ResponseCode ?? null;
+						$error_msg  = $eghl_response->msg->ResponseMsg ?? 'No QR returned';
+						throw new \RuntimeException("EGHL Sale failed [{$error_code}]: {$error_msg}");
+					}
+				} catch (\Throwable $e) {
+					log_message('error', 'EGHL_QR_SALE_FAILURE | user_id=' . ($this->session->get('log_id_frend') ?? '')
+						. ' | email=' . ($this->session->get('email') ?? '')
+						. ' | archanai_booking_id=' . $arch_book_id
+						. ' | amount=' . $tot_amt
+						. ' | status=failed'
+						. ' | error_code=' . $e->getCode()
+						. ' | message=' . $e->getMessage()
+						. ' | datetime=' . date('Y-m-d H:i:s'));
+
+					$this->db->table('archanai_booking')->where('id', $arch_book_id)->update(['payment_status' => 3]);
+					$msg_data['err'] = 'QR code not generated. Kindly rebook the ticket.';
+					echo json_encode($msg_data);
+					exit();
+				}
 			} else {
 				$msg_data['pay_status'] = true;
 			}
@@ -1825,8 +1876,10 @@ class Archanai_booking extends BaseController
 					// Get payment gateway data
 					$archanai_payment_gateway_datas = $this->db->table('archanai_payment_gateway_datas')->select('archanai_payment_gateway_datas.*, payment_mode.pay_key')->join('payment_mode', 'payment_mode.id = archanai_payment_gateway_datas.payment_mode', 'left')->where('archanai_payment_gateway_datas.archanai_booking_id', $booking_id)->get()->getRowArray();
 					if ($archanai_booking->payment_status == 1) {
-							if($archanai_payment_gateway_datas['pay_key'] == 'rhb_qr'){
-								$rtn = $this->initiate_rhb_qr($booking_id, $archanai_booking, $archanai_payment_gateway_datas);
+							if($archanai_payment_gateway_datas['pay_key'] == 'rhb_qr' || $archanai_payment_gateway_datas['pay_key'] == 'eghl_qr'){
+								$rtn = $archanai_payment_gateway_datas['pay_key'] == 'eghl_qr'
+									? $this->initiate_eghl_qr($booking_id, $archanai_booking, $archanai_payment_gateway_datas)
+									: $this->initiate_rhb_qr($booking_id, $archanai_booking, $archanai_payment_gateway_datas);
 								if($rtn['status'] == 'pending'){
 									$data = array(
 										'status' => true,
@@ -1920,6 +1973,21 @@ class Archanai_booking extends BaseController
 			return json_encode($data);
 		}
 	}
+	/**
+	 * Each physical counter has its own registered EGHL terminal.
+	 * Resolves the correct TerminalID for the currently logged-in counter staff,
+	 * falling back to EGHL_TERMINALID if this login isn't mapped.
+	 */
+	private function resolveEghlTerminalId(){
+		$login_id = $this->session->get('log_id_frend');
+		$login = $this->db->table('login')
+			->select('eghl_terminal_id')
+			->where('id', $login_id)
+			->get()
+			->getRowArray();
+		return !empty($login['eghl_terminal_id']) ? $login['eghl_terminal_id'] : EGHL_TERMINALID;
+	}
+
 	public function initiate_rhb_qr($arch_book_id, $archanai_booking, $archanai_payment_gateway_datas){
 		$request_data = json_decode($archanai_payment_gateway_datas['request_data']);
 		$payment_gateway_datas_id = $archanai_payment_gateway_datas['id'];
@@ -1975,7 +2043,90 @@ class Archanai_booking extends BaseController
 
 		return $rtn;
 	}
-	
+
+	public function initiate_eghl_qr($arch_book_id, $archanai_booking, $archanai_payment_gateway_datas){
+		$request_data = json_decode($archanai_payment_gateway_datas['request_data']);
+		$payment_gateway_datas_id = $archanai_payment_gateway_datas['id'];
+		$rtn = [];
+
+		if (empty($request_data->msg->RetTxnRef) || empty($request_data->msg->TxnRef)) {
+			$rtn['status'] = 'unidentify';
+			$rtn['org_msg'] = 'Server Down';
+			return $rtn;
+		}
+
+		try {
+			$pay_amount = EGHL_TEST ? 1 : bcdiv($archanai_booking->amount, '1', 2);
+
+			$txnPMT = new \App\Libraries\MahJsonAPI(EGHL_SERVER_CERT_PATH, EGHL_CLIENT_KEY_PATH);
+			$txnPMT->Amount = $pay_amount;
+			$txnPMT->setLatRetTxnRef($request_data->msg->RetTxnRef);
+			$txnPMT->MerchantID = EGHL_MERCHANTID;
+			$txnPMT->OperatorID = 'SALE';
+			$txnPMT->TerminalID = $request_data->msg->TerminalID ?? $this->resolveEghlTerminalId();
+			$txnPMT->ProductCode = 'DUITNOWDQR';
+
+			$response = $txnPMT->paymentQuery($request_data->msg->TxnRef);
+
+			if ($response === 'Invalid signature') {
+				log_message('error', 'EGHL_QR_QUERY_INVALID_SIGNATURE | user_id=' . ($this->session->get('log_id_frend') ?? '')
+					. ' | email=' . ($this->session->get('email') ?? '')
+					. ' | archanai_booking_id=' . $arch_book_id
+					. ' | amount=' . $archanai_booking->amount
+					. ' | status=unidentify'
+					. ' | error_code=SIGNATURE'
+					. ' | message=EGHL query response failed signature verification'
+					. ' | datetime=' . date('Y-m-d H:i:s'));
+				$rtn['status'] = 'unidentify';
+				$rtn['org_msg'] = 'Server Down';
+				return $rtn;
+			}
+
+			$this->db->table('archanai_payment_gateway_datas')->where('id', $payment_gateway_datas_id)->update(['response_data' => $response]);
+			$response_data = json_decode($response);
+
+			if (isset($response_data->msg->OrgResponseCode) && isset($response_data->msg->OrgResponseMsg)) {
+				if ($response_data->msg->OrgResponseCode != 'PN') {
+					if ($response_data->msg->OrgResponseCode == '00') {
+						$rtn['status'] = 'success';
+						$this->db->table('archanai_booking')->where('id', $arch_book_id)->update(['payment_status' => 2]);
+						$this->account_migration($arch_book_id);
+					} else {
+						$this->db->table('archanai_booking')->where('id', $arch_book_id)->update(['payment_status' => 3]);
+						$rtn['status'] = 'failed';
+						log_message('error', 'EGHL_QR_QUERY_FAILED | user_id=' . ($this->session->get('log_id_frend') ?? '')
+							. ' | email=' . ($this->session->get('email') ?? '')
+							. ' | archanai_booking_id=' . $arch_book_id
+							. ' | amount=' . $archanai_booking->amount
+							. ' | status=failed'
+							. ' | error_code=' . $response_data->msg->OrgResponseCode
+							. ' | message=' . $response_data->msg->OrgResponseMsg
+							. ' | datetime=' . date('Y-m-d H:i:s'));
+					}
+				} else {
+					$rtn['status'] = 'pending';
+				}
+				$rtn['org_msg'] = $response_data->msg->OrgResponseMsg;
+			} else {
+				$rtn['status'] = 'unidentify';
+				$rtn['org_msg'] = 'Server Down';
+			}
+		} catch (\Throwable $e) {
+			log_message('error', 'EGHL_QR_QUERY_EXCEPTION | user_id=' . ($this->session->get('log_id_frend') ?? '')
+				. ' | email=' . ($this->session->get('email') ?? '')
+				. ' | archanai_booking_id=' . $arch_book_id
+				. ' | amount=' . $archanai_booking->amount
+				. ' | status=unidentify'
+				. ' | error_code=' . $e->getCode()
+				. ' | message=' . $e->getMessage()
+				. ' | datetime=' . date('Y-m-d H:i:s'));
+			$rtn['status'] = 'unidentify';
+			$rtn['org_msg'] = 'Server Down';
+		}
+
+		return $rtn;
+	}
+
 	public function cancel_booking(){
 		$data = [];
 
@@ -1998,14 +2149,17 @@ class Archanai_booking extends BaseController
 
 					// Get payment gateway data
 					$archanai_payment_gateway_datas = $this->db->table('archanai_payment_gateway_datas')
-						->where('archanai_booking_id', $booking_id)
+						->select('archanai_payment_gateway_datas.*, payment_mode.pay_key')
+						->join('payment_mode', 'payment_mode.id = archanai_payment_gateway_datas.payment_mode', 'left')
+						->where('archanai_payment_gateway_datas.archanai_booking_id', $booking_id)
 						->get()
 						->getRowArray();
 
 					if ($archanai_booking->payment_status == 1) {
-						if (!empty($archanai_payment_gateway_datas) && $archanai_payment_gateway_datas['pay_method'] === 'rhb_qr') {
-							// Call your initiate_rhb_qr method (assumed exists in this class)
-							$rtn = $this->initiate_rhb_qr($booking_id, $archanai_booking, $archanai_payment_gateway_datas);
+						if (!empty($archanai_payment_gateway_datas) && ($archanai_payment_gateway_datas['pay_key'] === 'rhb_qr' || $archanai_payment_gateway_datas['pay_key'] === 'eghl_qr')) {
+							$rtn = $archanai_payment_gateway_datas['pay_key'] === 'eghl_qr'
+								? $this->initiate_eghl_qr($booking_id, $archanai_booking, $archanai_payment_gateway_datas)
+								: $this->initiate_rhb_qr($booking_id, $archanai_booking, $archanai_payment_gateway_datas);
 
 							if ($rtn['status'] == 'success') {
 								$data = [

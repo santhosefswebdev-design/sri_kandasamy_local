@@ -1600,12 +1600,13 @@ span.archa_name {
               location.reload(true);
             } else location.reload(true);
           }else{
-            if(obj.payment_key == 'rhb_qr'){
+            if(obj.payment_key == 'rhb_qr' || obj.payment_key == 'eghl_qr'){
               showQRPaymentModal(obj.qr_code, obj.amount);
               window.my_print = my_print;
               window.booking_id = obj.id;
               $('#qr_modal').modal('show');
-              $(".qr_image").attr('src', 'data:image/jpeg;base64,' + obj.qr_code);
+              var qrMime = (String(obj.qr_code).substring(0, 5) === 'iVBOR') ? 'image/png' : 'image/jpeg';
+              $(".qr_image").attr('src', 'data:' + qrMime + ';base64,' + obj.qr_code);
               $(".amt").val(obj.amount);
               setTimeout(function(){
                 repeat_load(obj.id, my_print);
@@ -1757,7 +1758,8 @@ span.archa_name {
   }
 
   function showQRPaymentModal(qrCodeBase64, amount) {
-      $(".qr_image").attr('src', 'data:image/jpeg;base64,' + qrCodeBase64);
+      var qrMime = (String(qrCodeBase64).substring(0, 5) === 'iVBOR') ? 'image/png' : 'image/jpeg';
+      $(".qr_image").attr('src', 'data:' + qrMime + ';base64,' + qrCodeBase64);
       $('#payment_amount').text('RM ' + parseFloat(amount).toFixed(2));
       $('#qr_modal').modal('show');
       startPaymentTimer();
