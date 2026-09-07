@@ -161,6 +161,7 @@ class Report_online extends BaseController
 		$res = $this->db->table("archanai_booking")->where("id", $id)->get()->getRowArray();
 		$data['amt'] = $res['amount'];
 		$data['ref_no'] = $res['ref_no'];
+		$data['tpri_ref_no'] = $res['tpri_ref_no'];
 
 		$res1 = $this->db->table("archanai_payment_gateway_datas")->select('pay_method')->where("archanai_booking_id", $id)->get()->getRowArray();
 		$data['pay_method'] = $pay_method = $res1['pay_method'];
@@ -190,6 +191,10 @@ class Report_online extends BaseController
 		$newPayMethodName = $payMode['name'];
 		$newLedgerId = $payMode['ledger_id'];
 		$updatePaymentMethod = $this->db->table("archanai_payment_gateway_datas")->where('archanai_booking_id', $bookingId)->update(['pay_method' => $newPayMethodName]);
+
+		if (isset($_POST['tpri_ref_no'])) {
+			$this->db->table("archanai_booking")->where('id', $bookingId)->update(['tpri_ref_no' => trim($_POST['tpri_ref_no']) ?: null]);
+		}
 
 		$entry = $this->db->table("entries")->select('id')->where('type', 3)->where('inv_id', $bookingId)->get()->getRowArray();
 		$entryItem = $this->db->table("entryitems")->where('entry_id', $entry['id'])->where('dc', 'D')->update(['ledger_id' => $$newLedgerId]);
@@ -483,6 +488,15 @@ class Report_online extends BaseController
 		$i = 1;
 		foreach ($dat as $row) {
 
+			if ($row['payment_status'] == 2) {
+				$status_txt = '<span class="paid_text">Paid</span>';
+			} elseif ($row['payment_status'] == 3) {
+				$status_txt = '<span class="cancel_text">Failed</span>';
+			} elseif ($row['payment_status'] == 1) {
+				$status_txt = '<span class="unpaid_text">Pending</span>';
+			} else {
+				$status_txt = '<span class="unpaid_text">Unknown</span>';
+			}
 
 			$data[] = array(
 				$i++,
@@ -491,7 +505,8 @@ class Report_online extends BaseController
 				$row['name'],
 				number_format($row['amount'], '2', '.', ','),
 				$row['pay_method'],
-				$print = '<a class="btn btn-warning btn-rad" title="A4" href="' . base_url() . '/donation_online/print_report/' . $row['id'] . '" target="_blank"><i class="fa fa-print"></i> A4 </a>  
+				$status_txt,
+				$print = '<a class="btn btn-warning btn-rad" title="A4" href="' . base_url() . '/donation_online/print_report/' . $row['id'] . '" target="_blank"><i class="fa fa-print"></i> A4 </a>
 				<a class="btn btn-primary btn-rad" style="display:none" title="A5 Print" href="' . base_url() . '/donation_online/print_report_a5/' . $row['id'] . '" target="_blank"><i class="fa fa-print"></i> </a>
 				<a class="btn btn-success btn-rad" title="Imin" href="' . base_url() . '/donation_online/print_booking/' . $row['id'] . '" target="_blank"><i class="fa fa-print"></i> Imin </a>   
 				   <a class="btn btn-info btn-or-pop btn-rad" title="Print" href=" ' . base_url() . '/report_online/booking_or_list/' . $row['id'] . '">OR</a>
@@ -518,6 +533,9 @@ class Report_online extends BaseController
 		$query = "SELECT id FROM payment_mode WHERE LOWER(REPLACE(REPLACE(REPLACE(name, ' ', ''), '_', ''), '-', '')) = LOWER(REPLACE(REPLACE(REPLACE(?, ' ', ''), '_', ''), '-', '')) AND paid_through = 'COUNTER' ";
 		$result = $this->db->query($query, [$pay_method])->getRowArray();
 		$data['payment_mode'] = $result['id'];
+
+		$donation = $this->db->table("donation")->select('tpri_ref_no')->where("id", $id)->get()->getRowArray();
+		$data['tpri_ref_no'] = $donation['tpri_ref_no'];
 
 		echo json_encode($data);
 	}
@@ -550,6 +568,10 @@ class Report_online extends BaseController
 		}
 
 		$updatePaymentMethod = $this->db->table("donation_payment_gateway_datas")->where('donation_booking_id', $bookingId)->update(['pay_method' => $newPayMethodName]);
+
+		if (isset($_POST['tpri_ref_no'])) {
+			$this->db->table("donation")->where('id', $bookingId)->update(['tpri_ref_no' => trim($_POST['tpri_ref_no']) ?: null]);
+		}
 
 		$entry = $this->db->table("entries")->select('id')->where('type', 2)->where('inv_id', $bookingId)->get()->getRowArray();
 		$entryItem = $this->db->table("entryitems")->where('entry_id', $entry['id'])->where('dc', 'D')->update(['ledger_id' => $newPayModeId]);
@@ -1003,6 +1025,10 @@ class Report_online extends BaseController
 
 			if ($row['booking_status'] == 3) {
 				$txt = '<span class="cancel_text">Cancelled</span>';
+			} elseif ($row['payment_status'] == 3) {
+				$txt = '<span class="cancel_text">Failed</span>';
+			} elseif ($row['payment_status'] == 1 && empty($balance_amount)) {
+				$txt = '<span class="unpaid_text">Pending</span>';
 			} else {
 
 				if (empty($balance_amount)) {

@@ -179,8 +179,8 @@
         <tr>
             <td><b>Ubayam Time:</b></td>
             <td><?php echo $booked_slot['slot_name']; ?></td>
-            <td></td>
-            <td></td>
+            <td><b>TPRI Ref No:</b></td>
+            <td><?php echo !empty($data['tpri_ref_no']) ? $data['tpri_ref_no'] : '-'; ?></td>
         </tr>
         <tr>
 

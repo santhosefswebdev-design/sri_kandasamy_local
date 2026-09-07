@@ -117,6 +117,11 @@
 			<p style="text-align: center;"><b>Invoice : </b>
 				<?php echo $qry1['ref_no']; ?>
 			</p>
+			<?php if (!empty($qry1['tpri_ref_no'])) { ?>
+			<p style="text-align: center;"><b>TPRI Ref No : </b>
+				<?php echo $qry1['tpri_ref_no']; ?>
+			</p>
+			<?php } ?>
 			<p style="text-align: center;"><b>Name : </b>
 				<?php echo $qry1['name']; ?>
 			</p>
@@ -210,6 +215,11 @@
 			<p style="text-align: center;"><b>Invoice : </b>
 				<?php echo $qry1['ref_no']; ?>
 			</p>
+			<?php if (!empty($qry1['tpri_ref_no'])) { ?>
+			<p style="text-align: center;"><b>TPRI Ref No : </b>
+				<?php echo $qry1['tpri_ref_no']; ?>
+			</p>
+			<?php } ?>
 			<p style="text-align: center;"><b>Name : </b>
 				<?php echo $qry1['name']; ?>
 			</p>

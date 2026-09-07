@@ -123,6 +123,13 @@
                         <td>:</td>
                         <td><?php echo $qry1['ref_no']; ?> </td>
                     </tr>
+                    <?php if (!empty($qry1['tpri_ref_no'])) { ?>
+                    <tr>
+                        <td style="text-align: right">TPRI Ref No</td>
+                        <td>:</td>
+                        <td><?php echo $qry1['tpri_ref_no']; ?> </td>
+                    </tr>
+                    <?php } ?>
                     <tr>
                         <td style="text-align: right">Ubayam Name</td>
                         <td>:</td>
@@ -358,6 +365,13 @@
                         <td>:</td>
                         <td><?php echo $qry1['ref_no']; ?> </td>
                     </tr>
+                    <?php if (!empty($qry1['tpri_ref_no'])) { ?>
+                    <tr>
+                        <td style="text-align: right">TPRI Ref No</td>
+                        <td>:</td>
+                        <td><?php echo $qry1['tpri_ref_no']; ?> </td>
+                    </tr>
+                    <?php } ?>
                     <tr>
                         <td style="text-align: right">Ubayam Name</td>
                         <td>:</td>

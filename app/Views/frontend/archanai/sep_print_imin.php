@@ -156,6 +156,9 @@
 						<?php echo date('d-m-Y', strtotime($qry1['created'])); ?>
 					</p>
 					<p style="text-align: center;font-size:26px;">Bill NO: <?php echo $qry1['ref_no']; ?></p>
+					<?php if (!empty($qry1['tpri_ref_no'])) { ?>
+					<p style="text-align: center;font-size:26px;">TPRI Ref No: <?php echo $qry1['tpri_ref_no']; ?></p>
+					<?php } ?>
 					<hr>
 
 					<?php
@@ -343,6 +346,9 @@
 							<?php echo date('d-m-Y', strtotime($qry1['created'])); ?>
 						</p>
 						<p style="text-align: center;font-size:26px;">Bill NO: <?php echo $qry1['ref_no']; ?></p>
+					<?php if (!empty($qry1['tpri_ref_no'])) { ?>
+					<p style="text-align: center;font-size:26px;">TPRI Ref No: <?php echo $qry1['tpri_ref_no']; ?></p>
+					<?php } ?>
 						<hr>
 
 						<?php

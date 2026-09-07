@@ -137,11 +137,11 @@
 
 	.modal-content {
 		background-color: #fefefe;
-		margin: 80px auto 20px auto;
+		margin: 5vh auto;
 		/* padding: 20px; */
 		border: 1px solid #888;
 		width: 80%;
-		max-height: 60vh;
+		max-height: 90vh;
 		overflow-y: auto;
 		z-index: 2000;
 	}
@@ -320,6 +320,10 @@
 										<?php } ?>
 									</select>
 								</div>
+								<div class="form-group form-float">
+									<label for="tpriRefNo">TPRI Ref No</label>
+									<input type="text" id="tpriRefNo" class="form-control" name="tpri_ref_no" placeholder="TPRI Ref No (optional)">
+								</div>
 								<input type="hidden" id="bookingId" name="booking_id">
 								<a href="#" id="del" class="btn btn-danger my-3" data-dismiss="modal">Cancel</a>
 								<button type="button" class="btn btn-primary" id="saveRepayment">Save</button>
@@ -451,8 +455,9 @@ function confirm_modal(id)
 					$("#bookingId").val(bookingId);
 					$("#amount").val(totalAmount);
 					$("#paymentMethod").val(paymentMode);
-					$("#oldPaymentMethod").val(paymentMethod); 
+					$("#oldPaymentMethod").val(paymentMethod);
 					$("#refNo").text(refNo);
+					$("#tpriRefNo").val(obj.tpri_ref_no || '');
 					$("#alert-modal_payment").modal('show');
 				},
 				error: function() {
@@ -486,7 +491,8 @@ function confirm_modal(id)
 				old_paymethod: oldPaymentMethod,
                 payment_mode: paymentMode,
                 booking_id: bookingId,
-				amount: amount
+				amount: amount,
+				tpri_ref_no: $("#tpriRefNo").val()
             },
             success: function(response){
                 var obj = JSON.parse(response);
