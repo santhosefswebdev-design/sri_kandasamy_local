@@ -1121,6 +1121,10 @@ function daily_hall_booking_withcurrentdate($current_date, $current_date_two, $b
 		->groupStart()
 		->where("tb.payment_status !=", 3)
 		->orWhere('tb.payment_status IS NULL')
+		->groupEnd()
+		->groupStart()
+		->where("tb.payment_status !=", 1)
+		->orWhere("tb.payment_type !=", 'full')
 		->groupEnd();
 
 	if (!empty($booking_type)) {
@@ -1165,6 +1169,10 @@ function daily_ubayam_withcurrentdate($current_date, $current_date_two, $booking
 		->groupStart()
 		->where("tb.payment_status !=", 3)
 		->orWhere('tb.payment_status IS NULL')
+		->groupEnd()
+		->groupStart()
+		->where("tb.payment_status !=", 1)
+		->orWhere("tb.payment_type !=", 'full')
 		->groupEnd();
 
 	if (!empty($booking_type)) {
@@ -1245,6 +1253,10 @@ function daily_prasadam_withcurrentdate($current_date, $current_date_two, $booki
 		->where("DATE_FORMAT(p.date, '%Y-%m-%d') >=", $current_date)
 		->where("DATE_FORMAT(p.date, '%Y-%m-%d') <=", $current_date_two)
 		->groupBy('p.id')
+		->groupStart()
+		->where("p.payment_status !=", 1)
+		->orWhere("p.payment_type !=", 'full')
+		->groupEnd()
 		->groupStart()
 		->where("p.payment_status !=", 3)
 		->orWhere('p.payment_status IS NULL')

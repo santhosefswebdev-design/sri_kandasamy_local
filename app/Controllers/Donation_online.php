@@ -41,6 +41,12 @@ class Donation_online extends BaseController
 	{
 		$login_id = $_SESSION['log_id_frend'];
 		$data['payment_mode'] = $this->db->table('payment_mode')->where("paid_through", "COUNTER")->where("donation", 1)->where('status', 1)->get()->getResultArray();
+		$login_eghl_terminal = $this->db->table('login')->select('eghl_terminal_id')->where('id', $login_id)->get()->getRowArray();
+		if (empty($login_eghl_terminal['eghl_terminal_id'])) {
+			$data['payment_mode'] = array_values(array_filter($data['payment_mode'], function ($pm) {
+				return $pm['pay_key'] !== 'eghl_qr';
+			}));
+		}
 		$default_group = $this->db->query("SELECT * FROM cashdonation_group ORDER BY id ASC LIMIT 1")->getRowArray();
 		$data['default'] = str_replace(' ', '_', strtolower($default_group['name']));
 

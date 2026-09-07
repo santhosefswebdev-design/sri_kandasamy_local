@@ -137,11 +137,11 @@
 
 	.modal-content {
 		background-color: #fefefe;
-		margin: 155px auto 20px auto;
+		margin: 5vh auto;
 		padding: 20px;
 		border: 1px solid #888;
 		width: 80%;
-		max-height: 60vh;
+		max-height: 90vh;
 		overflow-y: auto;
 	}
 
@@ -397,6 +397,10 @@
                                                         <?php } ?>
                                                     </select>
                                                 </div>
+                                                <div class="form-group form-float">
+                                                    <label for="tpriRefNo">TPRI Ref No</label>
+                                                    <input type="text" id="tpriRefNo" class="form-control" placeholder="TPRI Ref No (optional)">
+                                                </div>
                                                 <input type="hidden" id="bookingId" name="booking_id">
                                                 <a href="#" id="del" class="btn btn-danger my-3" data-dismiss="modal">Cancel</a>
                                                 <button type="button" class="btn btn-primary" id="saveRepayment">Save</button>
@@ -551,6 +555,7 @@
 					$("#totalAmount").text(totalAmount);
 					$("#paidAmount").text(paidAmount);
 					$("#balAmount").text(balAmount);
+					$("#tpriRefNo").val(obj.tpri_ref_no || '');
 					$("#alert-modal_payment").modal('show');
 				},
 				error: function() {
@@ -585,7 +590,8 @@
                 date: date,
                 pay_amount: payAmount,
                 payment_mode: paymentMode,
-                booking_id: bookingId
+                booking_id: bookingId,
+                tpri_ref_no: $("#tpriRefNo").val()
             },
             success: function(response){
                 var obj = JSON.parse(response);

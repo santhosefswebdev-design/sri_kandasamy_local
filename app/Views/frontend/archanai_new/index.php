@@ -50,7 +50,7 @@ a { text-decoration:none !important; }
 .show-cart td { font-size:11px; padding:3px; }
 .total { margin-top:15px; padding-bottom:10px; } 
 .total p { font-size: 24px; font-weight: bold; }
-.submit_btn { width:100%; font-size:22px; padding:7px; height:50px; background: #d4aa00; border:#d4aa00; margin-top:1px; }
+.submit_btn { width:100%; font-size:16px; padding:7px; min-height:50px; height:auto; white-space:normal; line-height:1.2; background: #d4aa00; border:#d4aa00; margin-top:1px; }
 .amt { padding:3px 5px; font-weight:bold; color:#333333 !important; }
 .prod_img { width:90px; margin:0 auto; border-radius: 50%; min-height:90px; max-height:90px;
     background: #e1e1d68a;
@@ -896,7 +896,8 @@ span.archa_name {
         list-style-type: none;
         width: 100%;
         display: flex;
-        justify-content: space-between;
+        flex-wrap: wrap;
+        justify-content: flex-start;
       margin-bottom:0;
       padding-left:0;
     }
@@ -904,7 +905,8 @@ span.archa_name {
     .payment li {
         display: inline-block;
         text-align:center;
-        width:50%;
+        flex: 1 1 100px;
+        max-width: 50%;
     }
 
     input[type="radio"][id^="cb"] {

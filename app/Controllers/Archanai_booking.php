@@ -57,6 +57,12 @@ class Archanai_booking extends BaseController
 			header('Location: '.base_url().'/dashboard');
 		} */
 		$data['payment_mode'] = $this->db->table('payment_mode')->where("paid_through", "COUNTER")->where("archanai", 1)->where('status', 1)->orderby('menu_order', 'ASC')->get()->getResultArray();
+		$login_eghl_terminal = $this->db->table('login')->select('eghl_terminal_id')->where('id', $login_id)->get()->getRowArray();
+		if (empty($login_eghl_terminal['eghl_terminal_id'])) {
+			$data['payment_mode'] = array_values(array_filter($data['payment_mode'], function ($pm) {
+				return $pm['pay_key'] !== 'eghl_qr';
+			}));
+		}
 		$data['permission'] = $this->model->get_permission('archanai_ticket');
 		$settings = $this->db->table('settings')->where('type', 1)->get()->getResultArray();
 		$setting_array = array();
@@ -127,6 +133,12 @@ class Archanai_booking extends BaseController
 				header('Location: '.base_url().'/dashboard');
 			} */
 		$data['payment_mode'] = $this->db->table('payment_mode')->where("paid_through", "COUNTER")->where("archanai", 1)->where('status', 1)->orderby('menu_order', 'ASC')->get()->getResultArray();
+		$login_eghl_terminal = $this->db->table('login')->select('eghl_terminal_id')->where('id', $login_id)->get()->getRowArray();
+		if (empty($login_eghl_terminal['eghl_terminal_id'])) {
+			$data['payment_mode'] = array_values(array_filter($data['payment_mode'], function ($pm) {
+				return $pm['pay_key'] !== 'eghl_qr';
+			}));
+		}
 		$data['permission'] = $this->model->get_permission('archanai_ticket');
 		$data['staff'] = $this->db->table('staff')->get()->getResultArray();
 		$data['rasi'] = $this->db->table('rasi')->get()->getResultArray();

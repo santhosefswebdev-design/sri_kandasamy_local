@@ -47,6 +47,12 @@ class Templeubayam_online extends BaseController
 	{
 		$login_id = $_SESSION['log_id_frend'];
 		$data['payment_mode'] = $this->db->table('payment_mode')->where("paid_through", "COUNTER")->where("ubayam", 1)->where('status', 1)->get()->getResultArray();
+		$login_eghl_terminal = $this->db->table('login')->select('eghl_terminal_id')->where('id', $login_id)->get()->getRowArray();
+		if (empty($login_eghl_terminal['eghl_terminal_id'])) {
+			$data['payment_mode'] = array_values(array_filter($data['payment_mode'], function ($pm) {
+				return $pm['pay_key'] !== 'eghl_qr';
+			}));
+		}
 		$default_group = $this->db->query("SELECT * FROM ubayam_group order by id asc limit 1")->getRowArray();
 		$data['default'] = str_replace(' ', '_', strtolower($default_group['name']));
 		// $data['sett_data'][''] = $this->db->table('ubayam_setting')->where('groupname', '')->get()->getResultArray();
@@ -511,6 +517,7 @@ class Templeubayam_online extends BaseController
 		$paid_amount = $res1['amount'];
 		$data['paid_amount'] = $paid_amount;
 		$data['bal_amount'] = $amt - $paid_amount;
+		$data['tpri_ref_no'] = $res['tpri_ref_no'];
 
 		echo json_encode($data);
 	}
@@ -558,6 +565,11 @@ class Templeubayam_online extends BaseController
 						$this->db->query("UPDATE templebooking SET payment_status = 1 WHERE id = ?", [$booking_id]);
 					}
 					$this->partial_account_migration($booked_pay_id);
+
+					if (isset($_POST['tpri_ref_no'])) {
+						$this->db->table("templebooking")->where('id', $booking_id)->update(['tpri_ref_no' => trim($_POST['tpri_ref_no']) ?: null]);
+					}
+
 					echo json_encode(['status' => true, 'message' => 'Repayment saved successfully.']);
 				} else {
 					echo json_encode(['status' => false, 'message' => 'Payment amount not exceed Total.']);
@@ -2671,6 +2683,12 @@ class Templeubayam_online extends BaseController
 	{
 		$login_id = $_SESSION['log_id_frend'];
 		$data['payment_mode'] = $this->db->table('payment_mode')->where("paid_through", "COUNTER")->where("ubayam", 1)->where('status', 1)->get()->getResultArray();
+		$login_eghl_terminal = $this->db->table('login')->select('eghl_terminal_id')->where('id', $login_id)->get()->getRowArray();
+		if (empty($login_eghl_terminal['eghl_terminal_id'])) {
+			$data['payment_mode'] = array_values(array_filter($data['payment_mode'], function ($pm) {
+				return $pm['pay_key'] !== 'eghl_qr';
+			}));
+		}
 		$default_group = $this->db->query("SELECT * FROM ubayam_group order by id asc limit 1")->getRowArray();
 		$data['default'] = str_replace(' ', '_', strtolower($default_group['name']));
 		// $data['sett_data'][''] = $this->db->table('ubayam_setting')->where('groupname', '')->get()->getResultArray();

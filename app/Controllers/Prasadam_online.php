@@ -76,6 +76,12 @@ class Prasadam_online extends BaseController
     $default_group = $this->db->query("SELECT * FROM prasadam_group order by id asc limit 1")->getRowArray();
     $data['default'] = str_replace(' ', '_', strtolower($default_group['name']));
     $data['payment_mode'] = $this->db->table('payment_mode')->where("paid_through", "COUNTER")->where("prasadam", 1)->where('status', 1)->get()->getResultArray();
+    $login_eghl_terminal = $this->db->table('login')->select('eghl_terminal_id')->where('id', $login_id)->get()->getRowArray();
+    if (empty($login_eghl_terminal['eghl_terminal_id'])) {
+      $data['payment_mode'] = array_values(array_filter($data['payment_mode'], function ($pm) {
+        return $pm['pay_key'] !== 'eghl_qr';
+      }));
+    }
     $data['phone_codes'] = $this->db->table("phone_code")->orderBy('dailing_code', 'ASC')->get()->getResultArray();
     $data['prasadam_settings'] = $this->db->query("SELECT * FROM prasadam_setting WHERE ledger_id != '' AND ledger_id IS NOT NULL ORDER BY order_no ASC")->getResultArray();
 
