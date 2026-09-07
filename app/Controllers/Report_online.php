@@ -108,7 +108,7 @@ class Report_online extends BaseController
 		$dat = $dat->where('DATE_FORMAT(ab.date, "%Y-%m-%d") <=', $tdt);
 
 		if (!empty($_POST['payment_mode'])) {
-			$dat = $dat->where('ab.payment_mode', $_POST['payment_mode']);
+			$dat = $dat->where('apgd.payment_mode', $_POST['payment_mode']);
 		}
 
 		$dat = $dat->orderBy('ab.id', 'desc');
@@ -1318,6 +1318,7 @@ class Report_online extends BaseController
 		$data = [];
 		$dat = $this->db->table('templebooking')
 			->join('booked_packages', 'booked_packages.booking_id = templebooking.id')
+			->join('booked_pay_details', 'booked_pay_details.booking_id = templebooking.id', 'left')
 			->select('booked_packages.name as pname')
 			->select('templebooking.*')
 			->where('templebooking.booking_type', $booking_type)
@@ -1333,7 +1334,7 @@ class Report_online extends BaseController
 		}
 
 		if (!empty($_POST['payment_mode'])) {
-			$dat = $dat->where('templebooking.payment_mode', $_POST['payment_mode']);
+			$dat = $dat->where('booked_pay_details.payment_mode_id', $_POST['payment_mode']);
 		}
 
 		$dat = $dat->orderBy('templebooking.id', 'desc');
