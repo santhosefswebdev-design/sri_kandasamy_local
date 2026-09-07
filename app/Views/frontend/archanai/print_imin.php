@@ -292,13 +292,14 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 				$('#test_img').attr('src', dataUrl);
 			}); */
 		});
+		$('.archanai_loader').hide();
+		$('#archanai_ticket').show();
+
 		var IminPrintInstance = new IminPrinter();
 		console.log('IminPrintInstance');
 		console.log(IminPrintInstance);
 		IminPrintInstance.connect().then(async (isConnect) => {
 			if (isConnect) {
-				$('.archanai_loader').hide();
-				$('#archanai_ticket').show();
 				console.log(await IminPrintInstance.getPrinterStatus());
 				var QrCodeSize;
 				<?php /*
