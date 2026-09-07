@@ -1131,7 +1131,8 @@
       list-style-type: none;
       width: 100%;
       display: flex;
-      justify-content: space-between;
+      flex-wrap: wrap;
+      justify-content: flex-start;
       margin-bottom: 0;
       padding-left: 0;
     }
@@ -1139,7 +1140,8 @@
     .payment li {
       display: inline-block;
       text-align: center;
-      width: 50%;
+      flex: 1 1 90px;
+      max-width: 33.33%;
     }
 
     input[type="radio"][id^="cb"] {
