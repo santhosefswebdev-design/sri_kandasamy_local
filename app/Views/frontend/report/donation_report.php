@@ -251,7 +251,19 @@
 												</div>
 											</div>                                            
                                         </div>
-                                        <div class="col-md-5 col-sm-4">
+                                        <div class="col-md-2 col-sm-4">
+                                            <div class="form-group form-float">
+                                                <div class="form-line">
+                                                    <select class="form-control" name="payment_mode" id="payment_mode_filter">
+                                                        <option value="">All Payment Modes</option>
+                                                        <?php foreach ($payment_modes as $pm) { ?>
+                                                            <option value="<?php echo $pm['id']; ?>"><?php echo $pm['name']; ?></option>
+                                                        <?php } ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-sm-4">
                                             <!-- <button type="submit" class="btn btn-success">Filter</button> -->
 											<label type="submit" class="btn btn-success btn-lg waves-effect" id="submit">FILTER</label>
                                         </div>
@@ -484,6 +496,7 @@ $(document).ready
                     data.fdt = $('#fdt').val();
                     data.tdt = $('#tdt').val();
                     data.payfor = $('#payfor').val();
+                    data.payment_mode = $('#payment_mode_filter').val();
                     data.fltername = $('#fltername').val();
                     }
             },

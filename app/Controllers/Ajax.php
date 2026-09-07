@@ -92,6 +92,7 @@ class Ajax extends BaseController
 							exit;
 						}
 						$booking_ins_data = array();
+						$booking_ins_data['tpri_ref_no'] = !empty($request_all_data['tpri_ref_no']) ? trim($request_all_data['tpri_ref_no']) : null;
 						$booking_ins_data['booking_type'] = $booking_type = trim($request_all_data['booking_type']);
 						$booking_ins_data['booking_date'] = trim($request_all_data['booking_date']);
 						$booking_ins_data['name'] = trim($request_all_data['name']);

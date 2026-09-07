@@ -229,7 +229,19 @@
                                                 </div>                                                        
                                             </div>                                            
                                         </div>
-                                        <div class="col-md-5 col-sm-4">
+                                        <div class="col-md-2 col-sm-4">
+                                            <div class="form-group form-float">
+                                                <div class="form-line">
+                                                    <select name="payment_mode" id="payment_mode_filter" class="form-control">
+                                                        <option value="">All Payment Modes</option>
+                                                        <?php foreach ($payment_modes as $pm) { ?>
+                                                            <option value="<?php echo $pm['id']; ?>"><?php echo $pm['name']; ?></option>
+                                                        <?php } ?>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 col-sm-4">
                                             <label type="submit" class="btn btn-success btn-lg waves-effect" id="submit">Filter</label>
                                         </div>
 
@@ -256,8 +268,9 @@
                                             <th style="width:5%;">S.No</th>
                                             <th style="width:20%;">Date</th>
                                             <th style="width:30%;">Invoice No</th>
-                                            <th style="width:20%;">Amount(RM)</th>
+                                            <th style="width:15%;">Amount(RM)</th>
 											<th style="width:15%;">Payment Mode</th>
+											<th style="width:10%;">Status</th>
 											<th style="width:10%;">Action</th>
 
 										</tr>
@@ -405,7 +418,8 @@ function confirm_modal(id)
                 data: function ( data ) {
                     data.fdt = $('#fdt').val();
                     data.tdt = $('#tdt').val();
-                    
+                    data.payment_mode = $('#payment_mode_filter').val();
+
                     }
             },
         });

@@ -431,6 +431,10 @@ span.archa_name {
                             </div>
 						            </div>
                                         
+                         <div class="col-md-12" style="margin-top:15px; margin-bottom:15px;">
+                            <input type="text" id="tpri_ref_no" class="form-control" name="tpri_ref_no" placeholder="TPRI Ref No (optional)">
+                         </div>
+
                          <div class="total d-flex justify-content-between align-items-center" style="width:100%; border-bottom:1px dashed #CCC;">
                         	<p class="mb-0">Total </p>
                             <p class="mb-0">RM : <span class="total-cart"></span></p>

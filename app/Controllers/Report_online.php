@@ -107,6 +107,10 @@ class Report_online extends BaseController
 			->where('DATE_FORMAT(ab.date, "%Y-%m-%d") >=', $fdt);
 		$dat = $dat->where('DATE_FORMAT(ab.date, "%Y-%m-%d") <=', $tdt);
 
+		if (!empty($_POST['payment_mode'])) {
+			$dat = $dat->where('ab.payment_mode', $_POST['payment_mode']);
+		}
+
 		$dat = $dat->orderBy('ab.id', 'desc');
 		$dat = $dat->get()->getResultArray();
 		$print = "";
@@ -116,16 +120,27 @@ class Report_online extends BaseController
 
 			//$action = '<a class="btn btn-warning btn-payment btn-rad" title="Pay" href=" ' .base_url(). '/annathanam_new/payment/' . $aname['id']. '" target="_blank"><i class="fa fa-credit-card"></i> </a>';
 
+			if ($row['payment_status'] == 2) {
+				$status_txt = '<span class="paid_text">Paid</span>';
+			} elseif ($row['payment_status'] == 3) {
+				$status_txt = '<span class="cancel_text">Failed</span>';
+			} elseif ($row['payment_status'] == 1) {
+				$status_txt = '<span class="unpaid_text">Pending</span>';
+			} else {
+				$status_txt = '<span class="unpaid_text">Unknown</span>';
+			}
+
 			$data[] = array(
 				$i++,
 				date('d-m-Y', strtotime($row['date'])),
 				$row['ref_no'],
 				$row['amount'],
 				$row['pay_method'],
+				$status_txt,
 				$print = '<a class="btn btn-success btn-rad" title="Imin" href="' . base_url() . '/archanai_booking/print_booking/' . $row['id'] . '" target="_blank"><i class="fa fa-print"></i> Imin </a>     <a class="btn btn-warning btn-payment btn-rad" title="Repayment" href=" ' . base_url() . '/annathanam_new/payment/' . $row['id'] . '" target="_blank"><i class="fa fa-credit-card"></i> Repay</a>
 				<a class="btn btn-info btn-or-pop btn-rad d-none" title="Print" href=" ' . base_url() . '/report_online/booking_or_list/' . $row['id'] . '">OR</a>
 				',
-				
+
 
 			);
 		}
@@ -460,6 +475,9 @@ class Report_online extends BaseController
 		}
 		if ($fltername) {
 			$dat = $dat->where('donation.name', $fltername);
+		}
+		if (!empty($_POST['payment_mode'])) {
+			$dat = $dat->where('donation.payment_mode', $_POST['payment_mode']);
 		}
 		$dat = $dat->get()->getResultArray();
 		$i = 1;
@@ -1314,6 +1332,10 @@ class Report_online extends BaseController
 			$dat = $dat->where('templebooking.payment_type', $group_filter);
 		}
 
+		if (!empty($_POST['payment_mode'])) {
+			$dat = $dat->where('templebooking.payment_mode', $_POST['payment_mode']);
+		}
+
 		$dat = $dat->orderBy('templebooking.id', 'desc');
 		$dat = $dat->get()->getResultArray();
 
@@ -1326,8 +1348,12 @@ class Report_online extends BaseController
 
 			if ($row['booking_status'] == 3) {
 				$txt = '<span class="cancel_text">Cancelled</span>';
+			} elseif ($row['payment_status'] == 3) {
+				$txt = '<span class="cancel_text">Failed</span>';
 			} elseif ($row['payment_type'] == 'only_booking' && $row['payment_status'] == 0) {
 				$txt = '<span class="cancel_text">Only Booked</span>';
+			} elseif ($row['payment_status'] == 1 && empty($balance_amount)) {
+				$txt = '<span class="unpaid_text">Pending</span>';
 			} else {
 
 				if (empty($balance_amount)) {
