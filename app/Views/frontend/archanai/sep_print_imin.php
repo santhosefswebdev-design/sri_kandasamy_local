@@ -523,15 +523,14 @@
 		var vConsole = new VConsole();
 
 		$(document).ready(function () {
-			$('#archanai_loader').hide();
-			$('#archanai_ticket').show();
-
 			var IminPrintInstance = new IminPrinter();
 			console.log('IminPrintInstance created');
 
 			IminPrintInstance.connect().then(async (connect) => {
 				if (connect) {
 					console.log('Printer connected successfully');
+					$('#archanai_loader').hide();
+					$('#archanai_ticket').show();
 
 					// Initialize printer first
 					IminPrintInstance.initPrinter();
