@@ -1710,7 +1710,6 @@ span.archa_name {
           hideQRPaymentModal();
           shoppingCart.clearCart();
           displayCart();
-          alert('Payment Received Successfully!');
           if(my_print){
             window.open("<?php echo base_url(); ?>/archanai_booking/print_booking/" + booking_id, "_blank", "width=680,height=500");
             location.reload(true);
