@@ -125,3 +125,9 @@ nb-configuration.xml
 /phpunit*.xml
 /.phpunit.*.cache
 
+#-------------------------
+# EGHL private keys/certs
+#-------------------------
+writable/eghl/*
+!writable/eghl/index.html
+
