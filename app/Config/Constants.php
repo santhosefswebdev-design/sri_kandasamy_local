@@ -91,7 +91,7 @@ defined('EGHL_TERMINALID')       || define('EGHL_TERMINALID', getenv('eghl.termi
 defined('EGHL_PREFIX')           || define('EGHL_PREFIX', getenv('eghl.prefix') ?: 'SKAND');
 // Per-counter terminal mapping lives in the `eghl_user_terminal` table (login_id -> terminal_id),
 // so new counters/terminals can be added without a code change. This is only the ultimate fallback.
-defined('EGHL_TEST')             || define('EGHL_TEST', filter_var(getenv('eghl.test') ?: 'true', FILTER_VALIDATE_BOOLEAN));
+defined('EGHL_TEST')             || define('EGHL_TEST', filter_var(getenv('eghl.test') ?: 'false', FILTER_VALIDATE_BOOLEAN));
 defined('EGHL_CLIENT_KEY_PATH')  || define('EGHL_CLIENT_KEY_PATH', WRITEPATH . 'eghl/client.key');  // our private key
 defined('EGHL_SERVER_CERT_PATH') || define('EGHL_SERVER_CERT_PATH', WRITEPATH . 'eghl/server.cer'); // EGHL's public cert
 
