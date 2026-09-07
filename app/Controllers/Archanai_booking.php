@@ -593,7 +593,7 @@ class Archanai_booking extends BaseController
 
 					$txnPMT = new \App\Libraries\MahJsonAPI(EGHL_SERVER_CERT_PATH, EGHL_CLIENT_KEY_PATH);
 					$txnPMT->Amount = $pay_amount;
-					$txnPMT->setNewRetTxnRef(EGHL_PREFIX . '_ARCH_' . $arch_book_id);
+					$txnPMT->setNewRetTxnRef(EGHL_PREFIX . '_ARCH_' . $arch_book_id . '_' . $archanai_payment_gateway_id);
 					$txnPMT->MerchantID = EGHL_MERCHANTID;
 					$txnPMT->OperatorID = 'SALE';
 					$txnPMT->TerminalID = $this->resolveEghlTerminalId();
