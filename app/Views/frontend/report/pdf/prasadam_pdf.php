@@ -110,6 +110,7 @@ table td, table th { padding:5px; }
 			<!-- <th style="width:12%;text-align: center;">Collection Date</th> -->
 			<th style="width:15%;text-align:left;">Payfor</th>
 			<th style="width:10%;text-align: center;">Amount</th>
+			<th style="width:10%;text-align: left;">TPRI Ref No</th>
     	</tr>
     </thead>
     <tbody>
@@ -122,7 +123,7 @@ table td, table th { padding:5px; }
 		$fltername_fil= $fltername;
 		$data = [];
 		$dat = $db->table('prasadam p')
-			->select('p.`id`, `p`.`date`, p.`customer_name`, pg.group_name, p.`amount`')
+			->select('p.`id`, `p`.`date`, p.`customer_name`, pg.group_name, p.`amount`, p.`tpri_ref_no`')
 			->join('prasadam_booking_details pbd', 'p.id = pbd.prasadam_booking_id', 'left')
 			->join('prasadam_setting ps', 'ps.id = pbd.prasadam_id', 'left')
 			->join('prasadam_setting_group psp', 'psp.prasadam_id = ps.id', 'left')
@@ -156,8 +157,9 @@ table td, table th { padding:5px; }
 		<!-- <td style='text-align: center;'><?php echo date('d-m-Y', strtotime($row['collection_date'])); ?></td> -->
 		<td style='text-align: left;'><?php echo $html; ?></td>
 		<td style='text-align: center;'><?php if($row['amount'] =='') 
-		{ echo $row['amount']; } 
+		{ echo $row['amount']; }
 		else { echo number_format($row['amount'], '2','.',','); } ?></td>
+		<td style='text-align: left;'><?php echo !empty($row['tpri_ref_no']) ? $row['tpri_ref_no'] : '-'; ?></td>
 	</tr>
 	<?php } ?>   
 

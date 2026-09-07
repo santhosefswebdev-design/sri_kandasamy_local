@@ -97,6 +97,7 @@ table td, table th { padding:5px; }
     <th align="left" width="10%">Date</th>
     <th align="left" width="10%">Invoice No</th>
     <th align="right" width="9%">Amount</th>
+    <th align="left" width="10%">TPRI Ref No</th>
     </tr>
     </thead>
     <tbody>
@@ -124,6 +125,7 @@ table td, table th { padding:5px; }
 		<td><?php echo date('d-m-Y', strtotime($row['date'])); ?></td>
 		<td><?php echo $row['ref_no']; ?></td>
 		<td style="text-align:right"><?php echo $row['amount']; ?></td>
+		<td><?php echo !empty($row['tpri_ref_no']) ? $row['tpri_ref_no'] : '-'; ?></td>
 	</tr>
 	<?php } ?>  
 

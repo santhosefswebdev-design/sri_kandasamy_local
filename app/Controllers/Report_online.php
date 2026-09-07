@@ -258,6 +258,7 @@ class Report_online extends BaseController
 			$sheet->setCellValue('C2', 'Invoice No');
 			$sheet->setCellValue('D2', 'Amount');
 			$sheet->setCellValue('E2', 'Payment Mode');
+			$sheet->setCellValue('F2', 'TPRI Ref No');
 			$rows = 3;
 			$si = 1;
 			$excel_format_data = $this->excel_format_get_archanai_report($data['fdate'], $data['tdate']);
@@ -269,6 +270,7 @@ class Report_online extends BaseController
 				$sheet->setCellValue('C' . $rows, $val['ref_no']);
 				$sheet->setCellValue('D' . $rows, $val['amount']);
 				$sheet->setCellValue('E' . $rows, $val['payment_mode']);
+				$sheet->setCellValue('F' . $rows, $val['tpri_ref_no']);
 				$rows++;
 				$si++;
 			}
@@ -303,7 +305,8 @@ class Report_online extends BaseController
 				"date" => date('d-m-Y', strtotime($row['date'])),
 				"ref_no" => $row['ref_no'],
 				"amount" => $row['amount'],
-				"payment_mode" => $row['pay_method']
+				"payment_mode" => $row['pay_method'],
+				"tpri_ref_no" => $row['tpri_ref_no']
 			);
 		}
 		return $data;
@@ -647,6 +650,7 @@ class Report_online extends BaseController
 			$sheet->setCellValue('C3', 'Pay for');
 			$sheet->setCellValue('D3', 'Name');
 			$sheet->setCellValue('E3', 'Amount');
+			$sheet->setCellValue('F3', 'TPRI Ref No');
 			$rows = 4;
 			$si = 1;
 			$totalAmount = 0;
@@ -663,6 +667,7 @@ class Report_online extends BaseController
 				$sheet->setCellValue('C' . $rows, $val['pname']);
 				$sheet->setCellValue('D' . $rows, $val['name']);
 				$sheet->setCellValue('E' . $rows, $val['amount']);
+				$sheet->setCellValue('F' . $rows, $val['tpri_ref_no']);
 				$totalAmount += $val['amount'];
 				$rows++;
 				$si++;
@@ -708,7 +713,8 @@ class Report_online extends BaseController
 				"date" => date('d-m-Y', strtotime($row['date'])),
 				"pname" => $row['pname'],
 				"name" => $row['name'],
-				"amount" => $row['amount']
+				"amount" => $row['amount'],
+				"tpri_ref_no" => $row['tpri_ref_no']
 			);
 		}
 		return $data;
@@ -1114,6 +1120,7 @@ class Report_online extends BaseController
 			// $sheet->setCellValue('D2', 'Collection Date');
 			$sheet->setCellValue('D2', 'Payfor');
 			$sheet->setCellValue('E2', 'Amount');
+			$sheet->setCellValue('F2', 'TPRI Ref No');
 			$rows = 3;
 			$si = 1;
 			$excel_format_data = $this->excel_format_get_prasadamreport($data['fdate'], $data['tdate'], $data['collection_date'], $data['fltername']);
@@ -1126,6 +1133,7 @@ class Report_online extends BaseController
 				// $sheet->setCellValue('D' . $rows, $val['collection_date']);
 				$sheet->setCellValue('D' . $rows, $val['collection_name']);
 				$sheet->setCellValue('E' . $rows, $val['amount']);
+				$sheet->setCellValue('F' . $rows, $val['tpri_ref_no']);
 				$rows++;
 				$si++;
 			}
@@ -1144,7 +1152,7 @@ class Report_online extends BaseController
 		$flternameg = $fltername;
 		$data = [];
 		$dat = $this->db->table('prasadam p')
-			->select('p.`id`, `p`.`date`, p.`customer_name`, pg.group_name, p.`amount`')
+			->select('p.`id`, `p`.`date`, p.`customer_name`, pg.group_name, p.`amount`, p.`tpri_ref_no`')
 			->join('prasadam_booking_details pbd', 'p.id = pbd.prasadam_booking_id', 'left')
 			->join('prasadam_setting ps', 'ps.id = pbd.prasadam_id', 'left')
 			->join('prasadam_setting_group psp', 'psp.prasadam_id = ps.id', 'left')
@@ -1173,7 +1181,8 @@ class Report_online extends BaseController
 				"customer_name" => $row['customer_name'],
 				"amount" => $row['amount'],
 				"collection_date" => date('d-m-Y', strtotime($row['collection_date'])),
-				"collection_name" => $html
+				"collection_name" => $html,
+				"tpri_ref_no" => $row['tpri_ref_no']
 			);
 		}
 		return $data;
@@ -3376,6 +3385,7 @@ class Report_online extends BaseController
 			$sheet->setCellValue('D2', 'Collection Date');
 			$sheet->setCellValue('E2', 'Payfor');
 			$sheet->setCellValue('F2', 'Amount');
+			$sheet->setCellValue('G2', 'TPRI Ref No');
 			$rows = 3;
 			$si = 1;
 			$excel_format_data = $this->excel_format_get_ubayamreport($data['fdate'], $data['tdate'], $data['collection_date'], $data['fltername']);
@@ -3388,6 +3398,7 @@ class Report_online extends BaseController
 				$sheet->setCellValue('D' . $rows, $val['collection_date']);
 				$sheet->setCellValue('E' . $rows, $val['collection_name']);
 				$sheet->setCellValue('F' . $rows, $val['amount']);
+				$sheet->setCellValue('G' . $rows, $val['tpri_ref_no']);
 				$rows++;
 				$si++;
 			}
@@ -3406,7 +3417,7 @@ class Report_online extends BaseController
 		$flternameg = $fltername;
 		$data = [];
 		$dat = $this->db->table('prasadam')
-			->select('prasadam.id,prasadam.date,prasadam.customer_name,prasadam.collection_date,prasadam.amount')
+			->select('prasadam.id,prasadam.date,prasadam.customer_name,prasadam.collection_date,prasadam.amount,prasadam.tpri_ref_no')
 			->where('DATE_FORMAT(prasadam.date, "%Y-%m-%d") >=', $fdt);
 		$dat = $dat->where('DATE_FORMAT(prasadam.date, "%Y-%m-%d") <=', $tdt);
 		if (!empty($collection_date)) {
@@ -3434,7 +3445,8 @@ class Report_online extends BaseController
 				"customer_name" => $row['customer_name'],
 				"amount" => $row['amount'],
 				"collection_date" => date('d-m-Y', strtotime($row['collection_date'])),
-				"collection_name" => $html
+				"collection_name" => $html,
+				"tpri_ref_no" => $row['tpri_ref_no']
 			);
 		}
 		return $data;

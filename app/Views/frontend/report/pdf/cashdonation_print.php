@@ -141,6 +141,7 @@ $res_don_set = $db->table('donation_setting ds')->join('donation d', 'ds.id = d.
     <th align="left" width="25%">Pay For</th>
     <th align="left" width="38%">Name</th>
     <th align="right" width="19%">Amount</th>
+    <th align="left" width="19%">TPRI Ref No</th>
     </tr>
     </thead>
     <tbody>
@@ -175,6 +176,7 @@ $res_don_set = $db->table('donation_setting ds')->join('donation d', 'ds.id = d.
         <td><?php echo $row ['pname']; ?></td>
         <td><?php echo $row['name']; ?></td>
         <td align="right"><?php echo number_format($row['amount'], '2','.',','); ?></td>
+        <td><?php echo !empty($row['tpri_ref_no']) ? $row['tpri_ref_no'] : '-'; ?></td>
 	</tr>
     <?php } ?>
 	 <tr>
