@@ -395,6 +395,65 @@ class Ajax extends BaseController
 										$resp['data']['status'] = true;
 										$resp['data']['booking_id'] = $booking_id;
 										$resp['data']['message'] = 'Proceed to RHB Payment';
+									} elseif ($payment_key == 'eghl_qr') {
+										try {
+											if (empty(EGHL_MERCHANTID) || empty(EGHL_TERMINALID)) {
+												throw new \RuntimeException('EGHL credentials are not configured.');
+											}
+
+											$pay_amount = EGHL_TEST ? 1 : bcdiv($this->paid_amount, '1', 2);
+
+											$txnPMT = new \App\Libraries\MahJsonAPI(EGHL_SERVER_CERT_PATH, EGHL_CLIENT_KEY_PATH);
+											$txnPMT->Amount = $pay_amount;
+											$txnPMT->setNewRetTxnRef(EGHL_PREFIX . $module_name . $booking_id . '_' . $booked_pay_id);
+											$txnPMT->MerchantID = EGHL_MERCHANTID;
+											$txnPMT->OperatorID = 'SALE';
+											$txnPMT->TerminalID = $this->resolveEghlTerminalId();
+											$txnPMT->ProductCode = 'DUITNOWDQR';
+
+											$raw_response = $txnPMT->paymentAsynchronous();
+											if ($raw_response === 'Invalid signature') {
+												throw new \RuntimeException('EGHL response failed signature verification.');
+											}
+											$eghl_response = json_decode($raw_response);
+
+											if (!empty($eghl_response->msg->DisplayInfo[0]->Value)) {
+												$booked_pay_details = ['request_data' => json_encode($eghl_response)];
+												$this->db->table('booked_pay_details')->where('id', $booked_pay_id)->update($booked_pay_details);
+
+												$resp['data']['qr_code'] = $eghl_response->msg->DisplayInfo[0]->Value; // base64 PNG
+												$resp['data']['total_amount'] = $pay_amount;
+											} else {
+												$error_code = $eghl_response->msg->ResponseCode ?? null;
+												$error_msg  = $eghl_response->msg->ResponseMsg ?? 'No QR returned';
+												throw new \RuntimeException("EGHL Sale failed [{$error_code}]: {$error_msg}");
+											}
+										} catch (\Throwable $e) {
+											log_message('error', 'EGHL_QR_SALE_FAILURE | user_id=' . ($this->session->get('log_id_frend') ?? '')
+												. ' | booking_id=' . $booking_id
+												. ' | amount=' . $this->paid_amount
+												. ' | status=failed'
+												. ' | error_code=' . $e->getCode()
+												. ' | message=' . $e->getMessage()
+												. ' | datetime=' . date('Y-m-d H:i:s'));
+
+											$this->db->transRollback();
+											$resp['success'] = true;
+											$resp['data']['pay_status'] = false;
+											$resp['data']['status'] = false;
+											$resp['data']['message'] = 'QR code not generated. Kindly rebook the ticket.';
+											header('Content-Type: application/json; charset=utf-8');
+											echo json_encode($resp);
+											exit;
+										}
+
+										$this->db->table("templebooking")->where('id', $booking_id)->update($booking_ref_data);
+										$resp['success'] = true;
+										$resp['data']['pay_status'] = false;
+										$resp['data']['payment_key'] = $payment_key;
+										$resp['data']['status'] = true;
+										$resp['data']['booking_id'] = $booking_id;
+										$resp['data']['message'] = 'Proceed to EGHL Payment';
 									} else {
 										if ($this->final_total <= $this->paid_amount)
 											$booking_ref_data['payment_status'] = 2;
@@ -519,8 +578,10 @@ class Ajax extends BaseController
 					// Get payment gateway data
 					$booked_pay_details = $this->db->table('booked_pay_details')->select('booked_pay_details.*, payment_mode.pay_key')->join('payment_mode', 'payment_mode.id = booked_pay_details.payment_mode_id', 'left')->where('booked_pay_details.booking_id', $booking_id)->get()->getRowArray();
 					if ($booking->payment_status == 1) {
-						if ($booked_pay_details['pay_key'] == 'rhb_qr') {
-							$rtn = $this->initiate_rhb_qr($booking_id, $booking, $booked_pay_details);
+						if ($booked_pay_details['pay_key'] == 'rhb_qr' || $booked_pay_details['pay_key'] == 'eghl_qr') {
+							$rtn = $booked_pay_details['pay_key'] == 'eghl_qr'
+								? $this->initiate_eghl_qr($booking_id, $booking, $booked_pay_details)
+								: $this->initiate_rhb_qr($booking_id, $booking, $booked_pay_details);
 							if ($rtn['status'] == 'pending') {
 								$data = array(
 									'status' => true,
@@ -664,6 +725,96 @@ class Ajax extends BaseController
 		return $rtn;
 	}
 
+	private function resolveEghlTerminalId(){
+		$login_id = $this->session->get('log_id_frend');
+		$login = $this->db->table('login')
+			->select('eghl_terminal_id')
+			->where('id', $login_id)
+			->get()
+			->getRowArray();
+		return !empty($login['eghl_terminal_id']) ? $login['eghl_terminal_id'] : EGHL_TERMINALID;
+	}
+
+	public function initiate_eghl_qr($booking_id, $booking, $booked_pay_details){
+		$request_data = json_decode($booked_pay_details['request_data']);
+		$booked_pay_details_id = $booked_pay_details['id'];
+		$rtn = [];
+
+		if (empty($request_data->msg->RetTxnRef) || empty($request_data->msg->TxnRef)) {
+			$rtn['status'] = 'unidentify';
+			$rtn['org_msg'] = 'Server Down';
+			return $rtn;
+		}
+
+		try {
+			$pay_amount = EGHL_TEST ? 1 : bcdiv($booking->paid_amount, '1', 2);
+
+			$txnPMT = new \App\Libraries\MahJsonAPI(EGHL_SERVER_CERT_PATH, EGHL_CLIENT_KEY_PATH);
+			$txnPMT->Amount = $pay_amount;
+			$txnPMT->setLatRetTxnRef($request_data->msg->RetTxnRef);
+			$txnPMT->MerchantID = EGHL_MERCHANTID;
+			$txnPMT->OperatorID = 'SALE';
+			$txnPMT->TerminalID = $request_data->msg->TerminalID ?? $this->resolveEghlTerminalId();
+			$txnPMT->ProductCode = 'DUITNOWDQR';
+
+			$response = $txnPMT->paymentQuery($request_data->msg->TxnRef);
+
+			if ($response === 'Invalid signature') {
+				log_message('error', 'EGHL_QR_QUERY_INVALID_SIGNATURE | user_id=' . ($this->session->get('log_id_frend') ?? '')
+					. ' | booking_id=' . $booking_id
+					. ' | amount=' . $booking->paid_amount
+					. ' | status=unidentify'
+					. ' | error_code=SIGNATURE'
+					. ' | message=EGHL query response failed signature verification'
+					. ' | datetime=' . date('Y-m-d H:i:s'));
+				$rtn['status'] = 'unidentify';
+				$rtn['org_msg'] = 'Server Down';
+				return $rtn;
+			}
+
+			$this->db->table('booked_pay_details')->where('id', $booked_pay_details_id)->update(['response_data' => $response]);
+			$response_data = json_decode($response);
+
+			if (isset($response_data->msg->OrgResponseCode) && isset($response_data->msg->OrgResponseMsg)) {
+				if ($response_data->msg->OrgResponseCode != 'PN') {
+					if ($response_data->msg->OrgResponseCode == '00') {
+						$rtn['status'] = 'success';
+						$this->db->table('templebooking')->where('id', $booking_id)->update(['payment_status' => 2, 'booking_status' => 1]);
+						$this->account_migration($booking_id);
+					} else {
+						$this->db->table('templebooking')->where('id', $booking_id)->update(['payment_status' => 3]);
+						$rtn['status'] = 'failed';
+						log_message('error', 'EGHL_QR_QUERY_FAILED | user_id=' . ($this->session->get('log_id_frend') ?? '')
+							. ' | booking_id=' . $booking_id
+							. ' | amount=' . $booking->paid_amount
+							. ' | status=failed'
+							. ' | error_code=' . $response_data->msg->OrgResponseCode
+							. ' | message=' . $response_data->msg->OrgResponseMsg
+							. ' | datetime=' . date('Y-m-d H:i:s'));
+					}
+				} else {
+					$rtn['status'] = 'pending';
+				}
+				$rtn['org_msg'] = $response_data->msg->OrgResponseMsg;
+			} else {
+				$rtn['status'] = 'unidentify';
+				$rtn['org_msg'] = 'Server Down';
+			}
+		} catch (\Throwable $e) {
+			log_message('error', 'EGHL_QR_QUERY_EXCEPTION | user_id=' . ($this->session->get('log_id_frend') ?? '')
+				. ' | booking_id=' . $booking_id
+				. ' | amount=' . $booking->paid_amount
+				. ' | status=unidentify'
+				. ' | error_code=' . $e->getCode()
+				. ' | message=' . $e->getMessage()
+				. ' | datetime=' . date('Y-m-d H:i:s'));
+			$rtn['status'] = 'unidentify';
+			$rtn['org_msg'] = 'Server Down';
+		}
+
+		return $rtn;
+	}
+
 	public function cancel_booking()
 	{
 		$data = [];
@@ -679,9 +830,10 @@ class Ajax extends BaseController
 					$booked_pay_details = $this->db->table('booked_pay_details')->where('booking_id', $booking_id)->get()->getRowArray();
 
 					if ($booking->payment_status == 1) {
-						if (!empty($booked_pay_details) && $booked_pay_details['pay_method'] === 'RHB QR') {
-							// Call your initiate_rhb_qr method (assumed exists in this class)
-							$rtn = $this->initiate_rhb_qr($booking_id, $booking, $booked_pay_details);
+						if (!empty($booked_pay_details) && ($booked_pay_details['pay_method'] === 'RHB QR' || $booked_pay_details['pay_method'] === 'EGHL QR')) {
+							$rtn = $booked_pay_details['pay_method'] === 'EGHL QR'
+								? $this->initiate_eghl_qr($booking_id, $booking, $booked_pay_details)
+								: $this->initiate_rhb_qr($booking_id, $booking, $booked_pay_details);
 
 							if ($rtn['status'] == 'success') {
 								$data = [

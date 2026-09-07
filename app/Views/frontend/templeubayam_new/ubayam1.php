@@ -2515,7 +2515,7 @@
                                         }, 2000);
                                     });
                                 } else {
-                                    if(data.data.payment_key == 'rhb_qr'){
+                                    if(data.data.payment_key == 'rhb_qr' || data.data.payment_key == 'eghl_qr'){
                                         window.booking_id = data.data.booking_id;
                                         showQRPaymentModal(data.data.qr_code, data.data.total_amount);
                                         setTimeout(function(){
@@ -2742,7 +2742,8 @@
         }
 
         function showQRPaymentModal(qrCodeBase64, amount) {
-            $(".qr_image").attr('src', 'data:image/jpeg;base64,' + qrCodeBase64);
+            var qrMime = (String(qrCodeBase64).substring(0, 5) === 'iVBOR') ? 'image/png' : 'image/jpeg';
+            $(".qr_image").attr('src', 'data:' + qrMime + ';base64,' + qrCodeBase64);
             $('.total-cart').text(parseFloat(amount).toFixed(2));
             $('#qr_modal').modal('show');
             startPaymentTimer();
