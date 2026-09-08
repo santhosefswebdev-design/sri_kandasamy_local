@@ -550,42 +550,25 @@ class Templeubayam_online extends BaseController
 					}
 
 					if ($payment_mode_details['pay_key'] == 'eghl_qr') {
-						$booking_payment_ins_data = array();
-						$booking_payment_ins_data['booking_id'] = $booking_id;
-						$booking_payment_ins_data['booking_type'] = 2;
-						$booking_payment_ins_data['is_repayment'] = 1;
-						$booking_payment_ins_data['booking_ref_no'] = $ubayam_details['ref_no'];
-						$booking_payment_ins_data['payment_mode_id'] = $payment_mode;
-						$booking_payment_ins_data['paid_date'] = !empty($date) ? $date : date('Y-m-d');
-						$booking_payment_ins_data['amount'] = $pay_amount;
-						$booking_payment_ins_data['payment_mode_title'] = $payment_mode_details['name'];
-						$booking_payment_ins_data['payment_key'] = 'eghl_qr';
-						$booking_payment_ins_data['paid_through'] = 'ONLINE';
-						$booking_payment_ins_data['pay_status'] = 1;
-						$this->requestmodel = new RequestModel();
-						$ip = $this->requestmodel->getIpAddress();
-						$booking_payment_ins_data['ip'] = $ip;
-						if ($ip != 'unknown') {
-							$ip_details = $this->requestmodel->getLocation($ip);
-							$booking_payment_ins_data['ip_location'] = (!empty($ip_details['country']) ? $ip_details['country'] : 'Unknown');
-							$booking_payment_ins_data['ip_details'] = json_encode($ip_details);
-						}
-						$this->db->table("booked_pay_details")->insert($booking_payment_ins_data);
-						$booked_pay_id = $this->db->insertID();
-
+						// No DB row is written here. A repayment record is only ever
+						// created once EGHL confirms success (see repayment_payment_check()).
+						// This avoids orphaned "pending" rows if the browser tab is closed
+						// or refreshed before the QR is scanned.
 						try {
 							if (empty(EGHL_MERCHANTID) || empty(EGHL_TERMINALID)) {
 								throw new \RuntimeException('EGHL credentials are not configured.');
 							}
 
 							$eghl_pay_amount = EGHL_TEST ? 1 : bcdiv($pay_amount, '1', 2);
+							$terminal_id = $this->resolveEghlTerminalId();
+							$ret_txn_ref = md5(uniqid('UBAYAMREPAY_' . $booking_id . '_', true));
 
 							$txnPMT = new \App\Libraries\MahJsonAPI(EGHL_SERVER_CERT_PATH, EGHL_CLIENT_KEY_PATH);
 							$txnPMT->Amount = $eghl_pay_amount;
-							$txnPMT->setNewRetTxnRef(EGHL_PREFIX . '_UBAYAMREPAY_' . $booking_id . '_' . $booked_pay_id);
+							$txnPMT->setNewRetTxnRef($ret_txn_ref);
 							$txnPMT->MerchantID = EGHL_MERCHANTID;
 							$txnPMT->OperatorID = 'SALE';
-							$txnPMT->TerminalID = $this->resolveEghlTerminalId();
+							$txnPMT->TerminalID = $terminal_id;
 							$txnPMT->ProductCode = 'DUITNOWDQR';
 
 							$raw_response = $txnPMT->paymentAsynchronous();
@@ -595,16 +578,19 @@ class Templeubayam_online extends BaseController
 							$eghl_response = json_decode($raw_response);
 
 							if (!empty($eghl_response->msg->DisplayInfo[0]->Value)) {
-								$this->db->table('booked_pay_details')->where('id', $booked_pay_id)->update(['request_data' => json_encode($eghl_response)]);
-
 								echo json_encode([
 									'status' => true,
 									'pay_status' => false,
 									'payment_key' => 'eghl_qr',
 									'qr_code' => $eghl_response->msg->DisplayInfo[0]->Value,
 									'total_amount' => $eghl_pay_amount,
-									'booked_pay_id' => $booked_pay_id,
 									'booking_id' => $booking_id,
+									'pay_amount' => $pay_amount,
+									'payment_mode' => $payment_mode,
+									'paid_date' => !empty($date) ? $date : date('Y-m-d'),
+									'ret_txn_ref' => $eghl_response->msg->RetTxnRef,
+									'txn_ref' => $eghl_response->msg->TxnRef,
+									'terminal_id' => $terminal_id,
 									'message' => 'Proceed to EGHL Payment',
 								]);
 							} else {
@@ -613,7 +599,6 @@ class Templeubayam_online extends BaseController
 								throw new \RuntimeException("EGHL Sale failed [{$error_code}]: {$error_msg}");
 							}
 						} catch (\Throwable $e) {
-							$this->db->table('booked_pay_details')->where('id', $booked_pay_id)->delete();
 							log_message('error', 'EGHL_QR_REPAY_SALE_FAILURE | user_id=' . ($this->session->get('log_id_frend') ?? '')
 								. ' | booking_id=' . $booking_id
 								. ' | amount=' . $pay_amount
@@ -674,56 +659,81 @@ class Templeubayam_online extends BaseController
 
 	public function repayment_payment_check()
 	{
-		if (empty($_REQUEST['booked_pay_id'])) {
-			echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Invalid request.']);
-			exit;
+		$required = ['ret_txn_ref', 'txn_ref', 'booking_id', 'pay_amount', 'payment_mode'];
+		foreach ($required as $field) {
+			if (empty($_REQUEST[$field])) {
+				echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Invalid request.']);
+				exit;
+			}
 		}
-		$booked_pay_id = $_REQUEST['booked_pay_id'];
-		$booked_pay_details = $this->db->table('booked_pay_details')->where('id', $booked_pay_id)->get()->getRowArray();
-		if (empty($booked_pay_details)) {
-			echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Payment record not found.']);
-			exit;
-		}
-		if ($booked_pay_details['pay_status'] == 2) {
-			echo json_encode(['status' => true, 'pay_status' => true, 'error_msg' => 'Payment already confirmed.', 'booking_id' => $booked_pay_details['booking_id']]);
-			exit;
-		}
-		$booking_id = $booked_pay_details['booking_id'];
-		$request_data = json_decode($booked_pay_details['request_data']);
-		if (empty($request_data->msg->RetTxnRef) || empty($request_data->msg->TxnRef)) {
-			echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Server Down']);
-			exit;
-		}
+		$booking_id = $_REQUEST['booking_id'];
+		$pay_amount = (float) $_REQUEST['pay_amount'];
+		$payment_mode = $_REQUEST['payment_mode'];
+		$paid_date = !empty($_REQUEST['paid_date']) ? $_REQUEST['paid_date'] : date('Y-m-d');
+		$ret_txn_ref = $_REQUEST['ret_txn_ref'];
+		$txn_ref = $_REQUEST['txn_ref'];
+		$terminal_id = !empty($_REQUEST['terminal_id']) ? $_REQUEST['terminal_id'] : $this->resolveEghlTerminalId();
 
 		try {
-			$pay_amount = EGHL_TEST ? 1 : bcdiv($booked_pay_details['amount'], '1', 2);
+			$eghl_pay_amount = EGHL_TEST ? 1 : bcdiv($pay_amount, '1', 2);
 
 			$txnPMT = new \App\Libraries\MahJsonAPI(EGHL_SERVER_CERT_PATH, EGHL_CLIENT_KEY_PATH);
-			$txnPMT->Amount = $pay_amount;
-			$txnPMT->setLatRetTxnRef($request_data->msg->RetTxnRef);
+			$txnPMT->Amount = $eghl_pay_amount;
+			$txnPMT->setLatRetTxnRef($ret_txn_ref);
 			$txnPMT->MerchantID = EGHL_MERCHANTID;
 			$txnPMT->OperatorID = 'SALE';
-			$txnPMT->TerminalID = $request_data->msg->TerminalID ?? $this->resolveEghlTerminalId();
+			$txnPMT->TerminalID = $terminal_id;
 			$txnPMT->ProductCode = 'DUITNOWDQR';
 
-			$response = $txnPMT->paymentQuery($request_data->msg->TxnRef);
+			$response = $txnPMT->paymentQuery($txn_ref);
 
 			if ($response === 'Invalid signature') {
-				log_message('error', 'EGHL_QR_REPAY_QUERY_INVALID_SIGNATURE | booking_id=' . $booking_id . ' | booked_pay_id=' . $booked_pay_id . ' | datetime=' . date('Y-m-d H:i:s'));
+				log_message('error', 'EGHL_QR_REPAY_QUERY_INVALID_SIGNATURE | booking_id=' . $booking_id . ' | datetime=' . date('Y-m-d H:i:s'));
 				echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Server Down']);
 				exit;
 			}
 
-			$this->db->table('booked_pay_details')->where('id', $booked_pay_id)->update(['response_data' => $response]);
 			$response_data = json_decode($response);
 
 			if (isset($response_data->msg->OrgResponseCode) && isset($response_data->msg->OrgResponseMsg)) {
 				if ($response_data->msg->OrgResponseCode == 'PN') {
+					// Still pending - nothing is saved until this resolves.
 					echo json_encode(['status' => true, 'pay_status' => false, 'error_msg' => 'Transaction is still pending']);
 					exit;
 				} elseif ($response_data->msg->OrgResponseCode == '00') {
-					$this->db->table('booked_pay_details')->where('id', $booked_pay_id)->update(['pay_status' => 2]);
-					$this->db->query("UPDATE templebooking SET paid_amount = paid_amount + ? WHERE id = ?", [$booked_pay_details['amount'], $booking_id]);
+					// Success - only now does a repayment record get created.
+					$payment_mode_details = $this->db->table('payment_mode')->where('id', $payment_mode)->get()->getRowArray();
+					$ubayam_details = $this->db->table('templebooking')->where('id', $booking_id)->get()->getRowArray();
+					if (empty($payment_mode_details) || empty($ubayam_details)) {
+						echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Booking not found.']);
+						exit;
+					}
+
+					$booking_payment_ins_data = array();
+					$booking_payment_ins_data['booking_id'] = $booking_id;
+					$booking_payment_ins_data['booking_type'] = 2;
+					$booking_payment_ins_data['is_repayment'] = 1;
+					$booking_payment_ins_data['booking_ref_no'] = $ubayam_details['ref_no'];
+					$booking_payment_ins_data['payment_mode_id'] = $payment_mode;
+					$booking_payment_ins_data['paid_date'] = $paid_date;
+					$booking_payment_ins_data['amount'] = $pay_amount;
+					$booking_payment_ins_data['payment_mode_title'] = $payment_mode_details['name'];
+					$booking_payment_ins_data['payment_key'] = 'eghl_qr';
+					$booking_payment_ins_data['paid_through'] = 'ONLINE';
+					$booking_payment_ins_data['pay_status'] = 2;
+					$booking_payment_ins_data['response_data'] = $response;
+					$this->requestmodel = new RequestModel();
+					$ip = $this->requestmodel->getIpAddress();
+					$booking_payment_ins_data['ip'] = $ip;
+					if ($ip != 'unknown') {
+						$ip_details = $this->requestmodel->getLocation($ip);
+						$booking_payment_ins_data['ip_location'] = (!empty($ip_details['country']) ? $ip_details['country'] : 'Unknown');
+						$booking_payment_ins_data['ip_details'] = json_encode($ip_details);
+					}
+					$this->db->table('booked_pay_details')->insert($booking_payment_ins_data);
+					$booked_pay_id = $this->db->insertID();
+
+					$this->db->query("UPDATE templebooking SET paid_amount = paid_amount + ? WHERE id = ?", [$pay_amount, $booking_id]);
 					$query = $this->db->table('templebooking')->where('id', $booking_id)->get()->getRowArray();
 					if ($query['amount'] == $query['paid_amount']) {
 						$this->db->query("UPDATE templebooking SET payment_status = 2 WHERE id = ?", [$booking_id]);
@@ -734,8 +744,10 @@ class Templeubayam_online extends BaseController
 					echo json_encode(['status' => true, 'pay_status' => true, 'error_msg' => 'Payment successful.', 'booking_id' => $booking_id]);
 					exit;
 				} else {
+					// Genuine EGHL-declined transaction (backend/gateway failure) -
+					// keep a record for diagnostics. User-initiated cancels never reach here.
+					$this->createFailedRepaymentRecord($booking_id, $payment_mode, $pay_amount, $paid_date, $response);
 					log_message('error', 'EGHL_QR_REPAY_QUERY_FAILED | booking_id=' . $booking_id
-						. ' | booked_pay_id=' . $booked_pay_id
 						. ' | error_code=' . $response_data->msg->OrgResponseCode
 						. ' | message=' . $response_data->msg->OrgResponseMsg
 						. ' | datetime=' . date('Y-m-d H:i:s'));
@@ -748,12 +760,54 @@ class Templeubayam_online extends BaseController
 			}
 		} catch (\Throwable $e) {
 			log_message('error', 'EGHL_QR_REPAY_QUERY_EXCEPTION | booking_id=' . $booking_id
-				. ' | booked_pay_id=' . $booked_pay_id
 				. ' | message=' . $e->getMessage()
 				. ' | datetime=' . date('Y-m-d H:i:s'));
 			echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Server Down']);
 			exit;
 		}
+	}
+
+	public function cancel_repayment()
+	{
+		// User-initiated cancel/timeout - nothing is written to booked_pay_details.
+		// Only kept as a log line for support/diagnostics purposes.
+		if (!empty($_REQUEST['booking_id'])) {
+			log_message('error', 'EGHL_QR_REPAY_CANCELLED | user_id=' . ($this->session->get('log_id_frend') ?? '')
+				. ' | booking_id=' . $_REQUEST['booking_id']
+				. ' | amount=' . ($_REQUEST['pay_amount'] ?? '')
+				. ' | status=cancelled'
+				. ' | datetime=' . date('Y-m-d H:i:s'));
+		}
+		echo json_encode(['status' => true]);
+		exit;
+	}
+
+	/**
+	 * Logs a genuine gateway-declined repayment attempt as a failed booked_pay_details
+	 * row. Never called for a user-initiated cancel/timeout - only for a real EGHL
+	 * failure response, so it stays a record of backend/gateway failures only.
+	 */
+	private function createFailedRepaymentRecord($booking_id, $payment_mode, $pay_amount, $paid_date, $response = null)
+	{
+		$payment_mode_details = $this->db->table('payment_mode')->where('id', $payment_mode)->get()->getRowArray();
+		$ubayam_details = $this->db->table('templebooking')->where('id', $booking_id)->get()->getRowArray();
+		if (empty($payment_mode_details) || empty($ubayam_details)) {
+			return;
+		}
+		$booking_payment_ins_data = array();
+		$booking_payment_ins_data['booking_id'] = $booking_id;
+		$booking_payment_ins_data['booking_type'] = 2;
+		$booking_payment_ins_data['is_repayment'] = 1;
+		$booking_payment_ins_data['booking_ref_no'] = $ubayam_details['ref_no'];
+		$booking_payment_ins_data['payment_mode_id'] = $payment_mode;
+		$booking_payment_ins_data['paid_date'] = $paid_date;
+		$booking_payment_ins_data['amount'] = $pay_amount;
+		$booking_payment_ins_data['payment_mode_title'] = $payment_mode_details['name'];
+		$booking_payment_ins_data['payment_key'] = 'eghl_qr';
+		$booking_payment_ins_data['paid_through'] = 'ONLINE';
+		$booking_payment_ins_data['pay_status'] = 3;
+		$booking_payment_ins_data['response_data'] = $response;
+		$this->db->table('booked_pay_details')->insert($booking_payment_ins_data);
 	}
 
 	public function partial_account_migration($booked_pay_id)

@@ -514,7 +514,8 @@
             success: function(response){
                 var obj = JSON.parse(response);
                 if(obj.status && obj.payment_key == 'eghl_qr' && !obj.pay_status){
-                    // EGHL QR generated - show QR and poll for payment confirmation
+                    // EGHL QR generated - show QR and poll for payment confirmation.
+                    // Nothing is saved to the DB yet - only once the poll confirms success.
                     $("#alert-modal_payment").modal('hide');
                     $("#repayQrAmount").text(formatAmount(obj.total_amount));
                     $("#repayQrImage").attr('src', 'data:image/png;base64,' + obj.qr_code);
@@ -522,8 +523,17 @@
                     $("#repay_qr_modal").modal('show');
                     window.repayQrAttempts = 0;
                     window.repayQrExpired = false;
+                    window.currentRepayContext = {
+                        ret_txn_ref: obj.ret_txn_ref,
+                        txn_ref: obj.txn_ref,
+                        terminal_id: obj.terminal_id,
+                        booking_id: obj.booking_id,
+                        pay_amount: obj.pay_amount,
+                        payment_mode: obj.payment_mode,
+                        paid_date: obj.paid_date
+                    };
                     startRepayQrTimer();
-                    repayPaymentPoll(obj.booked_pay_id, obj.booking_id);
+                    repayPaymentPoll(window.currentRepayContext);
                 } else if(obj.status){
                     $("#payAmount").val("");
                     $("#alert-modal_payment").modal('hide');
@@ -556,6 +566,7 @@
                 clearInterval(repayQrTimerInterval);
                 window.repayQrExpired = true;
                 $("#repayQrStatusMsg").css("color", "red").text('Payment timed out. Kindly try again.');
+                markRepayQrCancelled();
             } else {
                 updateRepayQrTimerDisplay();
             }
@@ -572,14 +583,26 @@
         clearInterval(repayQrTimerInterval);
     }
 
-    function repayPaymentPoll(bookedPayId, bookingId){
+    function markRepayQrCancelled(){
+        var ctx = window.currentRepayContext;
+        if (!ctx) {
+            return;
+        }
+        $.ajax({
+            type: "POST",
+            url: "<?php echo base_url(); ?>/prasadam_online/cancel_repayment",
+            data: { booking_id: ctx.booking_id, pay_amount: ctx.pay_amount }
+        });
+    }
+
+    function repayPaymentPoll(ctx){
         if (window.repayQrExpired) {
             return;
         }
         $.ajax({
             type: "POST",
             url: "<?php echo base_url(); ?>/prasadam_online/repayment_payment_check",
-            data: { booked_pay_id: bookedPayId },
+            data: ctx,
             success: function(response){
                 var obj = JSON.parse(response);
                 if(obj.pay_status){
@@ -595,7 +618,7 @@
                 } else if(obj.status){
                     // still pending
                     if (!window.repayQrExpired) {
-                        setTimeout(function(){ repayPaymentPoll(bookedPayId, bookingId); }, 5000);
+                        setTimeout(function(){ repayPaymentPoll(ctx); }, 5000);
                     }
                 } else {
                     stopRepayQrTimer();
@@ -608,7 +631,7 @@
             },
             error: function(){
                 if (!window.repayQrExpired) {
-                    setTimeout(function(){ repayPaymentPoll(bookedPayId, bookingId); }, 5000);
+                    setTimeout(function(){ repayPaymentPoll(ctx); }, 5000);
                 }
             }
         });
@@ -617,6 +640,7 @@
     $("#repayQrCancel").click(function(){
         stopRepayQrTimer();
         window.repayQrExpired = true;
+        markRepayQrCancelled();
         $("#repay_qr_modal").modal('hide');
         window.location.reload();
     });
