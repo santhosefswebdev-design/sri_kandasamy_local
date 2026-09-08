@@ -710,8 +710,9 @@ class Ajax extends BaseController
 				if ($response_data->paymentStatus === 'FOUND') {
 					$rtn['status'] = 'success';
 
-					// Update archanai_booking payment_status = 2
-					$this->db->table('templebooking')->where('id', $booking_id)->update(['payment_status' => 2, 'booking_status' => 1]);
+					// Update archanai_booking payment_status
+					$new_payment_status = ($booking->paid_amount >= $booking->amount) ? 2 : (($booking->paid_amount > 0) ? 1 : 0);
+					$this->db->table('templebooking')->where('id', $booking_id)->update(['payment_status' => $new_payment_status, 'booking_status' => 1]);
 
 					// Call migration functions
 					$this->account_migration($booking_id);
@@ -789,7 +790,8 @@ class Ajax extends BaseController
 				if ($response_data->msg->OrgResponseCode != 'PN') {
 					if ($response_data->msg->OrgResponseCode == '00') {
 						$rtn['status'] = 'success';
-						$this->db->table('templebooking')->where('id', $booking_id)->update(['payment_status' => 2, 'booking_status' => 1]);
+						$new_payment_status = ($booking->paid_amount >= $booking->amount) ? 2 : (($booking->paid_amount > 0) ? 1 : 0);
+						$this->db->table('templebooking')->where('id', $booking_id)->update(['payment_status' => $new_payment_status, 'booking_status' => 1]);
 						$this->account_migration($booking_id);
 					} else {
 						$this->db->table('templebooking')->where('id', $booking_id)->update(['payment_status' => 3]);

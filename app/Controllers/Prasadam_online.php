@@ -2040,7 +2040,8 @@ class Prasadam_online extends BaseController
         if ($response_data->msg->OrgResponseCode != 'PN') {
           if ($response_data->msg->OrgResponseCode == '00') {
             $rtn['status'] = 'success';
-            $this->db->table('prasadam')->where('id', $prasadam_id)->update(['payment_status' => 2]);
+            $new_payment_status = ($prasadam->paid_amount >= $prasadam->total_amount) ? 2 : (($prasadam->paid_amount > 0) ? 1 : 0);
+            $this->db->table('prasadam')->where('id', $prasadam_id)->update(['payment_status' => $new_payment_status]);
             $this->account_migration($prasadam_id);
           } else {
             $this->db->table('prasadam')->where('id', $prasadam_id)->update(['payment_status' => 3]);
