@@ -161,7 +161,6 @@ class Report_online extends BaseController
 		$res = $this->db->table("archanai_booking")->where("id", $id)->get()->getRowArray();
 		$data['amt'] = $res['amount'];
 		$data['ref_no'] = $res['ref_no'];
-		$data['tpri_ref_no'] = $res['tpri_ref_no'];
 
 		$res1 = $this->db->table("archanai_payment_gateway_datas")->select('pay_method')->where("archanai_booking_id", $id)->get()->getRowArray();
 		$data['pay_method'] = $pay_method = $res1['pay_method'];
@@ -191,10 +190,6 @@ class Report_online extends BaseController
 		$newPayMethodName = $payMode['name'];
 		$newLedgerId = $payMode['ledger_id'];
 		$updatePaymentMethod = $this->db->table("archanai_payment_gateway_datas")->where('archanai_booking_id', $bookingId)->update(['pay_method' => $newPayMethodName]);
-
-		if (isset($_POST['tpri_ref_no'])) {
-			$this->db->table("archanai_booking")->where('id', $bookingId)->update(['tpri_ref_no' => trim($_POST['tpri_ref_no']) ?: null]);
-		}
 
 		$entry = $this->db->table("entries")->select('id')->where('type', 3)->where('inv_id', $bookingId)->get()->getRowArray();
 		$entryItem = $this->db->table("entryitems")->where('entry_id', $entry['id'])->where('dc', 'D')->update(['ledger_id' => $$newLedgerId]);
@@ -258,7 +253,6 @@ class Report_online extends BaseController
 			$sheet->setCellValue('C2', 'Invoice No');
 			$sheet->setCellValue('D2', 'Amount');
 			$sheet->setCellValue('E2', 'Payment Mode');
-			$sheet->setCellValue('F2', 'TPRI Ref No');
 			$rows = 3;
 			$si = 1;
 			$excel_format_data = $this->excel_format_get_archanai_report($data['fdate'], $data['tdate']);
@@ -270,7 +264,6 @@ class Report_online extends BaseController
 				$sheet->setCellValue('C' . $rows, $val['ref_no']);
 				$sheet->setCellValue('D' . $rows, $val['amount']);
 				$sheet->setCellValue('E' . $rows, $val['payment_mode']);
-				$sheet->setCellValue('F' . $rows, $val['tpri_ref_no']);
 				$rows++;
 				$si++;
 			}
@@ -305,8 +298,7 @@ class Report_online extends BaseController
 				"date" => date('d-m-Y', strtotime($row['date'])),
 				"ref_no" => $row['ref_no'],
 				"amount" => $row['amount'],
-				"payment_mode" => $row['pay_method'],
-				"tpri_ref_no" => $row['tpri_ref_no']
+				"payment_mode" => $row['pay_method']
 			);
 		}
 		return $data;
@@ -537,9 +529,6 @@ class Report_online extends BaseController
 		$result = $this->db->query($query, [$pay_method])->getRowArray();
 		$data['payment_mode'] = $result['id'];
 
-		$donation = $this->db->table("donation")->select('tpri_ref_no')->where("id", $id)->get()->getRowArray();
-		$data['tpri_ref_no'] = $donation['tpri_ref_no'];
-
 		echo json_encode($data);
 	}
 
@@ -571,10 +560,6 @@ class Report_online extends BaseController
 		}
 
 		$updatePaymentMethod = $this->db->table("donation_payment_gateway_datas")->where('donation_booking_id', $bookingId)->update(['pay_method' => $newPayMethodName]);
-
-		if (isset($_POST['tpri_ref_no'])) {
-			$this->db->table("donation")->where('id', $bookingId)->update(['tpri_ref_no' => trim($_POST['tpri_ref_no']) ?: null]);
-		}
 
 		$entry = $this->db->table("entries")->select('id')->where('type', 2)->where('inv_id', $bookingId)->get()->getRowArray();
 		$entryItem = $this->db->table("entryitems")->where('entry_id', $entry['id'])->where('dc', 'D')->update(['ledger_id' => $newPayModeId]);
@@ -650,7 +635,6 @@ class Report_online extends BaseController
 			$sheet->setCellValue('C3', 'Pay for');
 			$sheet->setCellValue('D3', 'Name');
 			$sheet->setCellValue('E3', 'Amount');
-			$sheet->setCellValue('F3', 'TPRI Ref No');
 			$rows = 4;
 			$si = 1;
 			$totalAmount = 0;
@@ -667,7 +651,6 @@ class Report_online extends BaseController
 				$sheet->setCellValue('C' . $rows, $val['pname']);
 				$sheet->setCellValue('D' . $rows, $val['name']);
 				$sheet->setCellValue('E' . $rows, $val['amount']);
-				$sheet->setCellValue('F' . $rows, $val['tpri_ref_no']);
 				$totalAmount += $val['amount'];
 				$rows++;
 				$si++;
@@ -713,8 +696,7 @@ class Report_online extends BaseController
 				"date" => date('d-m-Y', strtotime($row['date'])),
 				"pname" => $row['pname'],
 				"name" => $row['name'],
-				"amount" => $row['amount'],
-				"tpri_ref_no" => $row['tpri_ref_no']
+				"amount" => $row['amount']
 			);
 		}
 		return $data;
@@ -1120,7 +1102,6 @@ class Report_online extends BaseController
 			// $sheet->setCellValue('D2', 'Collection Date');
 			$sheet->setCellValue('D2', 'Payfor');
 			$sheet->setCellValue('E2', 'Amount');
-			$sheet->setCellValue('F2', 'TPRI Ref No');
 			$rows = 3;
 			$si = 1;
 			$excel_format_data = $this->excel_format_get_prasadamreport($data['fdate'], $data['tdate'], $data['collection_date'], $data['fltername']);
@@ -1133,7 +1114,6 @@ class Report_online extends BaseController
 				// $sheet->setCellValue('D' . $rows, $val['collection_date']);
 				$sheet->setCellValue('D' . $rows, $val['collection_name']);
 				$sheet->setCellValue('E' . $rows, $val['amount']);
-				$sheet->setCellValue('F' . $rows, $val['tpri_ref_no']);
 				$rows++;
 				$si++;
 			}
@@ -1152,7 +1132,7 @@ class Report_online extends BaseController
 		$flternameg = $fltername;
 		$data = [];
 		$dat = $this->db->table('prasadam p')
-			->select('p.`id`, `p`.`date`, p.`customer_name`, pg.group_name, p.`amount`, p.`tpri_ref_no`')
+			->select('p.`id`, `p`.`date`, p.`customer_name`, pg.group_name, p.`amount`')
 			->join('prasadam_booking_details pbd', 'p.id = pbd.prasadam_booking_id', 'left')
 			->join('prasadam_setting ps', 'ps.id = pbd.prasadam_id', 'left')
 			->join('prasadam_setting_group psp', 'psp.prasadam_id = ps.id', 'left')
@@ -1181,8 +1161,7 @@ class Report_online extends BaseController
 				"customer_name" => $row['customer_name'],
 				"amount" => $row['amount'],
 				"collection_date" => date('d-m-Y', strtotime($row['collection_date'])),
-				"collection_name" => $html,
-				"tpri_ref_no" => $row['tpri_ref_no']
+				"collection_name" => $html
 			);
 		}
 		return $data;

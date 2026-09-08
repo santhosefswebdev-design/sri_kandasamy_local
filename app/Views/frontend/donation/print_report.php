@@ -88,10 +88,6 @@
             <td><?php echo $data['ref_no']; ?></td>
         </tr>
         <tr>
-            <td><b>TPRI Ref No:</b></td>
-            <td><?php echo !empty($data['tpri_ref_no']) ? $data['tpri_ref_no'] : '-'; ?></td>
-        </tr>
-        <tr>
             <td><b>Devotee Name:</b></td>
             <td><?php echo $data['name']; ?></td>
         </tr>

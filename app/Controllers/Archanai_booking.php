@@ -226,7 +226,6 @@ class Archanai_booking extends BaseController
 		$mon = date('m', strtotime($date));
 		$query = $this->db->query("SELECT ref_no FROM archanai_booking where id=(select max(id) from archanai_booking where year (date)='" . $yr . "' and month (date)='" . $mon . "')")->getRowArray();
 		$data['ref_no'] = 'AR' . $yr . $mon . (sprintf("%05d", (((float) substr($query['ref_no'], -5)) + 1)));
-		$data['tpri_ref_no'] = !empty($_POST['tpri_ref_no']) ? trim($_POST['tpri_ref_no']) : null;
 		$data['entry_by'] = $this->session->get('log_id_frend');
 		$data['sep_print'] = (!empty($_REQUEST['sep_print']) ? $_REQUEST['sep_print'] : 0);
 		$data['created'] = date('Y-m-d H:i:s');

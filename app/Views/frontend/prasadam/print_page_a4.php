@@ -215,9 +215,6 @@
                     ?>
                     <td><b>Distribution Notes:</b></td>
                     <td><?php echo $notes_labels[$data['prasadam_notes']] ?? $data['prasadam_notes']; ?></td>
-                <?php } else { ?>
-                    <td><b>TPRI Ref No:</b></td>
-                    <td><?php echo !empty($data['tpri_ref_no']) ? $data['tpri_ref_no'] : '-'; ?></td>
                 <?php } ?>
             </tr>
             <tr>

@@ -399,8 +399,6 @@
                                                 <table class="show-cart table table-bordered"
                                                     style="width:100%;display:none;"></table>
 
-                                                <input type="text" id="tpri_ref_no" class="form-control" name="tpri_ref_no" placeholder="TPRI Ref No (optional)" style="margin-bottom:10px;">
-
                                                 <h4
                                                     style="margin-bottom:5px; margin-top:5px; color:#FFFFFF; background:#d4aa00;">
                                                     Amount Pay for Donation</h4>

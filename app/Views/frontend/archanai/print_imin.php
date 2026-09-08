@@ -98,9 +98,6 @@ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 		<p style="text-align: center;">Date: <?php echo date('d-m-Y', strtotime($qry1['created'])); ?></p>
 
 		<p style="text-align: center;">Bill NO: <?php echo $qry1['ref_no']; ?></p>
-		<?php if (!empty($qry1['tpri_ref_no'])) { ?>
-		<p style="text-align: center;">TPRI Ref No: <?php echo $qry1['tpri_ref_no']; ?></p>
-		<?php } ?>
 		<hr>
 
 		<?php $sub_total = 0;

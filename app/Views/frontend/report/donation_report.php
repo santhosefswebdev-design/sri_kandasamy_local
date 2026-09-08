@@ -363,10 +363,6 @@
 										<?php } ?>
 									</select>
 								</div>
-								<div class="form-group form-float">
-									<label for="tpriRefNo">TPRI Ref No</label>
-									<input type="text" id="tpriRefNo" class="form-control" name="tpri_ref_no" placeholder="TPRI Ref No (optional)">
-								</div>
 								<input type="hidden" id="bookingId" name="booking_id">
 								<a href="#" id="del" class="btn btn-danger my-3" data-dismiss="modal">Cancel</a>
 								<button type="button" class="btn btn-primary" id="saveRepayment">Save</button>
@@ -581,7 +577,6 @@ $(document).ready
 					$("#paymentMethod").val(paymentMode);
 					$("#oldPaymentMethod").val(paymentMethod);
 					$("#refNo").text(refNo);
-					$("#tpriRefNo").val(obj.tpri_ref_no || '');
 					$("#alert-modal_payment").modal('show');
 				},
 				error: function() {
@@ -615,8 +610,7 @@ $(document).ready
 				old_paymethod: oldPaymentMethod,
                 payment_mode: paymentMode,
                 booking_id: bookingId,
-				amount: amount,
-				tpri_ref_no: $("#tpriRefNo").val()
+				amount: amount
             },
             success: function(response){
                 var obj = JSON.parse(response);

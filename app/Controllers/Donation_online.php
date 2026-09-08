@@ -148,7 +148,6 @@ class Donation_online extends BaseController
 		$mon = $date[1];
 		$query = $this->db->query("SELECT ref_no FROM donation where id=(select max(id) from donation where year (date)='" . $yr . "' and month (date)='" . $mon . "')")->getRowArray();
 		$data['ref_no'] = 'DO' . date('y', strtotime($_POST['date'])) . $mon . (sprintf("%05d", (((float) substr($query['ref_no'], -5)) + 1)));
-		$data['tpri_ref_no'] = !empty($_POST['tpri_ref_no']) ? trim($_POST['tpri_ref_no']) : null;
 		$data['is_tax_redemption'] = !empty($_POST['is_tax_redemption']) ? 1 : 0;
 
 		if ($data['is_tax_redemption'] == 1) {
