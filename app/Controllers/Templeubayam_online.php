@@ -737,7 +737,9 @@ class Templeubayam_online extends BaseController
 					$query = $this->db->table('templebooking')->where('id', $booking_id)->get()->getRowArray();
 					if ($query['amount'] == $query['paid_amount']) {
 						$this->db->query("UPDATE templebooking SET payment_status = 2 WHERE id = ?", [$booking_id]);
-					} elseif ($query['paid_amount'] > 0 && $query['payment_status'] == 0) {
+					} elseif ($query['paid_amount'] > 0) {
+						// A successful repayment always clears a stale/failed status
+						// (e.g. the original payment attempt having failed earlier).
 						$this->db->query("UPDATE templebooking SET payment_status = 1 WHERE id = ?", [$booking_id]);
 					}
 					$this->partial_account_migration($booked_pay_id);

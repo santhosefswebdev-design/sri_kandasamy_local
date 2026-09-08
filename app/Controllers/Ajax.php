@@ -839,11 +839,13 @@ class Ajax extends BaseController
 			if ($booking_cnt > 0) {
 				try {
 					$booking = $this->db->table('templebooking')->where('id', $booking_id)->get()->getRow();
-					$booked_pay_details = $this->db->table('booked_pay_details')->where('booking_id', $booking_id)->get()->getRowArray();
+					$booked_pay_details = $this->db->table('booked_pay_details')->select('booked_pay_details.*, payment_mode.pay_key')->join('payment_mode', 'payment_mode.id = booked_pay_details.payment_mode_id', 'left')->where('booked_pay_details.booking_id', $booking_id)->get()->getRowArray();
 
 					if ($booking->payment_status == 1) {
-						if (!empty($booked_pay_details) && ($booked_pay_details['pay_method'] === 'RHB QR' || $booked_pay_details['pay_method'] === 'EGHL QR')) {
-							$rtn = $booked_pay_details['pay_method'] === 'EGHL QR'
+						if (!empty($booked_pay_details) && ($booked_pay_details['pay_key'] === 'rhb_qr' || $booked_pay_details['pay_key'] === 'eghl_qr')) {
+							// Do a real, final check with the gateway before giving up -
+							// don't assume failure just because our own polling timed out.
+							$rtn = $booked_pay_details['pay_key'] === 'eghl_qr'
 								? $this->initiate_eghl_qr($booking_id, $booking, $booked_pay_details)
 								: $this->initiate_rhb_qr($booking_id, $booking, $booked_pay_details);
 
@@ -856,16 +858,27 @@ class Ajax extends BaseController
 									'error_msg' => "Thank you for using SMMDT Self Kiosk",
 								];
 								return json_encode($data);
-							} else {
-								// Update payment_status to 3 = failed
-								$this->db->table('templebooking')->where('id', $booking_id)->update(['payment_status' => 3]);
-
+							} elseif ($rtn['status'] == 'failed') {
+								// Gateway genuinely declined the transaction - safe to close it out.
+								// (payment_status is already set to 3 inside initiate_eghl_qr/initiate_rhb_qr)
 								$data = [
 									'status' => true,
 									'pay_status' => false,
 									'order_status' => 'failed',
 									'org_msg' => 'Transaction Failed',
 									'error_msg' => "We’re sorry! your payment is failed. Kindly try again.",
+								];
+								return json_encode($data);
+							} else {
+								// Still pending, or the gateway couldn't be reached - don't
+								// mark it failed on a guess. Leave payment_status as-is so a
+								// later check can still catch a genuine success.
+								$data = [
+									'status' => true,
+									'pay_status' => false,
+									'order_status' => 'unidentify',
+									'org_msg' => $rtn['org_msg'] ?? 'Server Down',
+									'error_msg' => "We’re sorry! we couldn’t confirm your payment status. If payment has been deducted, kindly contact us before rebooking.",
 								];
 								return json_encode($data);
 							}

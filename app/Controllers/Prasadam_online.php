@@ -1007,7 +1007,9 @@ class Prasadam_online extends BaseController
           $query = $this->db->table('prasadam')->where('id', $booking_id)->get()->getRowArray();
           if ($query['total_amount'] == $query['paid_amount']) {
             $this->db->query("UPDATE prasadam SET payment_status = 2 WHERE id = ?", [$booking_id]);
-          } elseif ($query['paid_amount'] > 0 && $query['payment_status'] == 0) {
+          } elseif ($query['paid_amount'] > 0) {
+            // A successful repayment always clears a stale/failed status
+            // (e.g. the original payment attempt having failed earlier).
             $this->db->query("UPDATE prasadam SET payment_status = 1 WHERE id = ?", [$booking_id]);
           }
           $this->partial_account_migration($booked_pay_id);
