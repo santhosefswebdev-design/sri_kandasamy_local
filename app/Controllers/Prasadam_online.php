@@ -2193,7 +2193,7 @@ class Prasadam_online extends BaseController
                   'pay_status' => false,
                   'order_status' => 'unidentify',
                   'org_msg' => $rtn['org_msg'] ?? 'Server Down',
-                  'error_msg' => "We’re sorry! we couldn’t confirm your payment status. If payment has been deducted, kindly contact us before rebooking.",
+                  'error_msg' => "Payment failed. Kindly try again.",
                 ];
                 return json_encode($data);
               }

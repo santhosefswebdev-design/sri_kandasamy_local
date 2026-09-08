@@ -1936,17 +1936,20 @@
     }
 
     function hideQRPaymentModal() {
+      // UI cleanup only - does NOT tell the server to cancel. Called both on
+      // manual cancel and on a confirmed success, so it must never trigger
+      // another server round-trip (that caused the print button to double-bind
+      // its click handler, printing every receipt twice).
       clearInterval(paymentTimer);
       window.paymentSeconds = 0;
-      cancel_booking(window.booking_id);
       $('#qr_modal').modal('hide');
       $("#loader").show();
     }
 
-    // Cancel button handler
+    // Cancel button handler - explicitly tells the server to cancel/verify.
     $('#cancel_payment_btn').on('click', function() {
+      cancel_booking(window.booking_id);
       hideQRPaymentModal();
-      // Add your cancel logic here, e.g., cancel booking/payment on server
     });
   </script>
 

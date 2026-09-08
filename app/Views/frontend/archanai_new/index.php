@@ -1780,8 +1780,8 @@ span.archa_name {
 
   // Cancel button handler
   $('#cancel_payment_btn').on('click', function() {
+      cancel_booking(window.booking_id);
       hideQRPaymentModal();
-      // Add your cancel logic here, e.g., cancel booking/payment on server
   });
 
 </script>
