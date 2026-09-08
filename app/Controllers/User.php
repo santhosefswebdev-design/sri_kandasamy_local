@@ -51,6 +51,7 @@ class User extends BaseController
         $data['password']	  	        =	$_POST['password'];
         $data['role']                 = $_POST['role'];
         $data['member_comes']          = $_POST['member_comes'];
+        $data['eghl_terminal_id']      = $_POST['eghl_terminal_id'] ?? null;
 		$data['email']		            =	$_POST['mailid'];
         $data['profile_id']	          =	1;
         $data['status']		            =	1;

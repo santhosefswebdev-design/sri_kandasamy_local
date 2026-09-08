@@ -86,7 +86,15 @@ if($view == true){
                                             </div>
                                         </div>
                                     </div>
-                                    
+                                    <div class="col-sm-6" id="terminal_id_field" style="<?php echo $data['member_comes'] == 'counter' ? '' : 'display:none;'; ?>">
+                                        <div class="form-group form-float">
+                                            <div class="form-line">
+                                                <input type="text" name="eghl_terminal_id" id="eghl_terminal_id" class="form-control" value="<?php echo $data['eghl_terminal_id'];?>" <?php echo $readonly; ?> >
+                                                <label class="form-label">EGHL Terminal ID</label>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                         </div>
                                 </div>
                             </div>
@@ -124,6 +132,15 @@ if($view == true){
 	$("#clear").click(function(){
 	   $("input").val("");
 	});
+	function toggleTerminalField(){
+		if($("select[name='member_comes']").val() == 'counter'){
+			$("#terminal_id_field").show();
+		}else{
+			$("#terminal_id_field").hide();
+		}
+	}
+	$("select[name='member_comes']").change(toggleTerminalField);
+	toggleTerminalField();
 </script>
 <script>
     function validations(){
