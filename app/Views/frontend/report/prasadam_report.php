@@ -337,7 +337,7 @@
                                                     <label for="paymentMode">Payment Mode</label>
                                                     <select class="form-control" id="paymentMode" name="payment_mode" required>
                                                         <?php foreach($payment_modes as $payment_mode) { ?>
-                                                            <option value="<?php echo $payment_mode['id']; ?>"><?php echo $payment_mode['name']; ?></option>
+                                                            <option value="<?php echo $payment_mode['id']; ?>" data-pay-key="<?php echo $payment_mode['pay_key']; ?>"><?php echo $payment_mode['name']; ?></option>
                                                         <?php } ?>
                                                     </select>
                                                 </div>
@@ -345,6 +345,24 @@
                                                 <a href="#" id="del" class="btn btn-danger my-3" data-dismiss="modal">Cancel</a>
                                                 <button type="button" class="btn btn-primary" id="saveRepayment">Save</button>
                                             </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="modal fade" id="repay_qr_modal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                                <div class="modal-dialog" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title" style="text-align: center;">Scan to Pay (EGHL)</h5>
+                                        </div>
+                                        <div class="modal-body" style="text-align: center;">
+                                            <p><b>Amount (RM): <span id="repayQrAmount"></span></b></p>
+                                            <img id="repayQrImage" src="" style="max-width: 280px;" alt="EGHL QR Code">
+                                            <p id="repayQrStatusMsg" style="margin-top: 10px;">Waiting for payment...</p>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-danger" id="repayQrCancel">Cancel</button>
                                         </div>
                                     </div>
                                 </div>
@@ -497,7 +515,16 @@
             },
             success: function(response){
                 var obj = JSON.parse(response);
-                if(obj.status){
+                if(obj.status && obj.payment_key == 'eghl_qr' && !obj.pay_status){
+                    // EGHL QR generated - show QR and poll for payment confirmation
+                    $("#alert-modal_payment").modal('hide');
+                    $("#repayQrAmount").text(formatAmount(obj.total_amount));
+                    $("#repayQrImage").attr('src', 'data:image/png;base64,' + obj.qr_code);
+                    $("#repayQrStatusMsg").css("color", "").text('Waiting for payment...');
+                    $("#repay_qr_modal").modal('show');
+                    window.repayQrAttempts = 0;
+                    repayPaymentPoll(obj.booked_pay_id, obj.booking_id);
+                } else if(obj.status){
                     $("#payAmount").val("");
                     $("#alert-modal_payment").modal('hide');
                     $("#spndeddelid").css("color", "green").text(obj.message);
@@ -507,7 +534,7 @@
 						$('#alert-modal1').modal('hide');  // Optionally hide the modal before reloading
 						window.location.reload();  // Reload the current page
 					}, 2000);
-                    
+
                 } else {
                     $("#spndeddelid").css("color", "red").text(obj.message);
                 }
@@ -516,6 +543,54 @@
                 $("#spndeddelid").css("color", "red").text('Error while saving repayment.');
             }
         });
+    });
+
+    function repayPaymentPoll(bookedPayId, bookingId){
+        $.ajax({
+            type: "POST",
+            url: "<?php echo base_url(); ?>/prasadam_online/repayment_payment_check",
+            data: { booked_pay_id: bookedPayId },
+            success: function(response){
+                var obj = JSON.parse(response);
+                if(obj.pay_status){
+                    $("#repay_qr_modal").modal('hide');
+                    $("#payAmount").val("");
+                    $('#alert-modal1').modal('show', { backdrop: 'static' });
+                    $("#spndeddelid").css("color", "green").text(obj.error_msg || 'Payment successful.');
+                    setTimeout(function() {
+                        $('#alert-modal1').modal('hide');
+                        window.location.reload();
+                    }, 2000);
+                } else if(obj.status){
+                    // still pending
+                    window.repayQrAttempts++;
+                    if (window.repayQrAttempts < 40) {
+                        setTimeout(function(){ repayPaymentPoll(bookedPayId, bookingId); }, 5000);
+                    } else {
+                        $("#repayQrStatusMsg").css("color", "red").text('Payment timed out. Kindly try again.');
+                    }
+                } else {
+                    $("#repayQrStatusMsg").css("color", "red").text(obj.error_msg || 'Payment failed. Kindly try again.');
+                    setTimeout(function(){
+                        $("#repay_qr_modal").modal('hide');
+                        window.location.reload();
+                    }, 3000);
+                }
+            },
+            error: function(){
+                window.repayQrAttempts++;
+                if (window.repayQrAttempts < 40) {
+                    setTimeout(function(){ repayPaymentPoll(bookedPayId, bookingId); }, 5000);
+                } else {
+                    $("#repayQrStatusMsg").css("color", "red").text('Payment timed out. Kindly try again.');
+                }
+            }
+        });
+    }
+
+    $("#repayQrCancel").click(function(){
+        $("#repay_qr_modal").modal('hide');
+        window.location.reload();
     });
 });
 

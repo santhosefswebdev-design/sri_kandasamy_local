@@ -521,11 +521,22 @@ class Templeubayam_online extends BaseController
 
 		echo json_encode($data);
 	}
+	private function resolveEghlTerminalId()
+	{
+		$login_id = $this->session->get('log_id_frend');
+		$login = $this->db->table('login')
+			->select('eghl_terminal_id')
+			->where('id', $login_id)
+			->get()
+			->getRowArray();
+		return !empty($login['eghl_terminal_id']) ? $login['eghl_terminal_id'] : EGHL_TERMINALID;
+	}
+
 	public function save_repayment()
 	{
 		if (!empty($_POST['payment_mode']) && !empty($_POST['pay_amount']) && !empty($_POST['booking_id'])) {
 			$date = $_POST['date'];
-			$pay_amount = $_POST['pay_amount'];
+			$pay_amount = (float) $_POST['pay_amount'];
 			$payment_mode = $_POST['payment_mode'];
 			$booking_id = $_POST['booking_id'];
 			$count = $this->db->table("payment_mode")->where('id', $payment_mode)->get()->getNumRows();
@@ -533,6 +544,88 @@ class Templeubayam_online extends BaseController
 				$payment_mode_details = $this->db->table("payment_mode")->where('id', $payment_mode)->get()->getRowArray();
 				$ubayam_details = $this->db->table("templebooking")->where('id', $booking_id)->get()->getRowArray();
 				if ($ubayam_details['total_amount'] >= ($ubayam_details['paid_amount'] + $pay_amount)) {
+
+					if (isset($_POST['tpri_ref_no'])) {
+						$this->db->table("templebooking")->where('id', $booking_id)->update(['tpri_ref_no' => trim($_POST['tpri_ref_no']) ?: null]);
+					}
+
+					if ($payment_mode_details['pay_key'] == 'eghl_qr') {
+						$booking_payment_ins_data = array();
+						$booking_payment_ins_data['booking_id'] = $booking_id;
+						$booking_payment_ins_data['booking_type'] = 2;
+						$booking_payment_ins_data['is_repayment'] = 1;
+						$booking_payment_ins_data['booking_ref_no'] = $ubayam_details['ref_no'];
+						$booking_payment_ins_data['payment_mode_id'] = $payment_mode;
+						$booking_payment_ins_data['paid_date'] = !empty($date) ? $date : date('Y-m-d');
+						$booking_payment_ins_data['amount'] = $pay_amount;
+						$booking_payment_ins_data['payment_mode_title'] = $payment_mode_details['name'];
+						$booking_payment_ins_data['payment_key'] = 'eghl_qr';
+						$booking_payment_ins_data['paid_through'] = 'ONLINE';
+						$booking_payment_ins_data['pay_status'] = 1;
+						$this->requestmodel = new RequestModel();
+						$ip = $this->requestmodel->getIpAddress();
+						$booking_payment_ins_data['ip'] = $ip;
+						if ($ip != 'unknown') {
+							$ip_details = $this->requestmodel->getLocation($ip);
+							$booking_payment_ins_data['ip_location'] = (!empty($ip_details['country']) ? $ip_details['country'] : 'Unknown');
+							$booking_payment_ins_data['ip_details'] = json_encode($ip_details);
+						}
+						$this->db->table("booked_pay_details")->insert($booking_payment_ins_data);
+						$booked_pay_id = $this->db->insertID();
+
+						try {
+							if (empty(EGHL_MERCHANTID) || empty(EGHL_TERMINALID)) {
+								throw new \RuntimeException('EGHL credentials are not configured.');
+							}
+
+							$eghl_pay_amount = EGHL_TEST ? 1 : bcdiv($pay_amount, '1', 2);
+
+							$txnPMT = new \App\Libraries\MahJsonAPI(EGHL_SERVER_CERT_PATH, EGHL_CLIENT_KEY_PATH);
+							$txnPMT->Amount = $eghl_pay_amount;
+							$txnPMT->setNewRetTxnRef(EGHL_PREFIX . '_UBAYAMREPAY_' . $booking_id . '_' . $booked_pay_id);
+							$txnPMT->MerchantID = EGHL_MERCHANTID;
+							$txnPMT->OperatorID = 'SALE';
+							$txnPMT->TerminalID = $this->resolveEghlTerminalId();
+							$txnPMT->ProductCode = 'DUITNOWDQR';
+
+							$raw_response = $txnPMT->paymentAsynchronous();
+							if ($raw_response === 'Invalid signature') {
+								throw new \RuntimeException('EGHL response failed signature verification.');
+							}
+							$eghl_response = json_decode($raw_response);
+
+							if (!empty($eghl_response->msg->DisplayInfo[0]->Value)) {
+								$this->db->table('booked_pay_details')->where('id', $booked_pay_id)->update(['request_data' => json_encode($eghl_response)]);
+
+								echo json_encode([
+									'status' => true,
+									'pay_status' => false,
+									'payment_key' => 'eghl_qr',
+									'qr_code' => $eghl_response->msg->DisplayInfo[0]->Value,
+									'total_amount' => $eghl_pay_amount,
+									'booked_pay_id' => $booked_pay_id,
+									'booking_id' => $booking_id,
+									'message' => 'Proceed to EGHL Payment',
+								]);
+							} else {
+								$error_code = $eghl_response->msg->ResponseCode ?? null;
+								$error_msg  = $eghl_response->msg->ResponseMsg ?? 'No QR returned';
+								throw new \RuntimeException("EGHL Sale failed [{$error_code}]: {$error_msg}");
+							}
+						} catch (\Throwable $e) {
+							$this->db->table('booked_pay_details')->where('id', $booked_pay_id)->delete();
+							log_message('error', 'EGHL_QR_REPAY_SALE_FAILURE | user_id=' . ($this->session->get('log_id_frend') ?? '')
+								. ' | booking_id=' . $booking_id
+								. ' | amount=' . $pay_amount
+								. ' | status=failed'
+								. ' | error_code=' . $e->getCode()
+								. ' | message=' . $e->getMessage()
+								. ' | datetime=' . date('Y-m-d H:i:s'));
+							echo json_encode(['status' => false, 'message' => 'QR code not generated. Kindly try again.']);
+						}
+						exit;
+					}
+
 					$booking_payment_ins_data = array();
 					$booking_payment_ins_data['booking_id'] = $booking_id;
 					$booking_payment_ins_data['booking_type'] = 2;
@@ -566,10 +659,6 @@ class Templeubayam_online extends BaseController
 					}
 					$this->partial_account_migration($booked_pay_id);
 
-					if (isset($_POST['tpri_ref_no'])) {
-						$this->db->table("templebooking")->where('id', $booking_id)->update(['tpri_ref_no' => trim($_POST['tpri_ref_no']) ?: null]);
-					}
-
 					echo json_encode(['status' => true, 'message' => 'Repayment saved successfully.']);
 				} else {
 					echo json_encode(['status' => false, 'message' => 'Payment amount not exceed Total.']);
@@ -582,6 +671,91 @@ class Templeubayam_online extends BaseController
 		}
 		exit;
 	}
+
+	public function repayment_payment_check()
+	{
+		if (empty($_REQUEST['booked_pay_id'])) {
+			echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Invalid request.']);
+			exit;
+		}
+		$booked_pay_id = $_REQUEST['booked_pay_id'];
+		$booked_pay_details = $this->db->table('booked_pay_details')->where('id', $booked_pay_id)->get()->getRowArray();
+		if (empty($booked_pay_details)) {
+			echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Payment record not found.']);
+			exit;
+		}
+		if ($booked_pay_details['pay_status'] == 2) {
+			echo json_encode(['status' => true, 'pay_status' => true, 'error_msg' => 'Payment already confirmed.', 'booking_id' => $booked_pay_details['booking_id']]);
+			exit;
+		}
+		$booking_id = $booked_pay_details['booking_id'];
+		$request_data = json_decode($booked_pay_details['request_data']);
+		if (empty($request_data->msg->RetTxnRef) || empty($request_data->msg->TxnRef)) {
+			echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Server Down']);
+			exit;
+		}
+
+		try {
+			$pay_amount = EGHL_TEST ? 1 : bcdiv($booked_pay_details['amount'], '1', 2);
+
+			$txnPMT = new \App\Libraries\MahJsonAPI(EGHL_SERVER_CERT_PATH, EGHL_CLIENT_KEY_PATH);
+			$txnPMT->Amount = $pay_amount;
+			$txnPMT->setLatRetTxnRef($request_data->msg->RetTxnRef);
+			$txnPMT->MerchantID = EGHL_MERCHANTID;
+			$txnPMT->OperatorID = 'SALE';
+			$txnPMT->TerminalID = $request_data->msg->TerminalID ?? $this->resolveEghlTerminalId();
+			$txnPMT->ProductCode = 'DUITNOWDQR';
+
+			$response = $txnPMT->paymentQuery($request_data->msg->TxnRef);
+
+			if ($response === 'Invalid signature') {
+				log_message('error', 'EGHL_QR_REPAY_QUERY_INVALID_SIGNATURE | booking_id=' . $booking_id . ' | booked_pay_id=' . $booked_pay_id . ' | datetime=' . date('Y-m-d H:i:s'));
+				echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Server Down']);
+				exit;
+			}
+
+			$this->db->table('booked_pay_details')->where('id', $booked_pay_id)->update(['response_data' => $response]);
+			$response_data = json_decode($response);
+
+			if (isset($response_data->msg->OrgResponseCode) && isset($response_data->msg->OrgResponseMsg)) {
+				if ($response_data->msg->OrgResponseCode == 'PN') {
+					echo json_encode(['status' => true, 'pay_status' => false, 'error_msg' => 'Transaction is still pending']);
+					exit;
+				} elseif ($response_data->msg->OrgResponseCode == '00') {
+					$this->db->table('booked_pay_details')->where('id', $booked_pay_id)->update(['pay_status' => 2]);
+					$this->db->query("UPDATE templebooking SET paid_amount = paid_amount + ? WHERE id = ?", [$booked_pay_details['amount'], $booking_id]);
+					$query = $this->db->table('templebooking')->where('id', $booking_id)->get()->getRowArray();
+					if ($query['amount'] == $query['paid_amount']) {
+						$this->db->query("UPDATE templebooking SET payment_status = 2 WHERE id = ?", [$booking_id]);
+					} elseif ($query['paid_amount'] > 0 && $query['payment_status'] == 0) {
+						$this->db->query("UPDATE templebooking SET payment_status = 1 WHERE id = ?", [$booking_id]);
+					}
+					$this->partial_account_migration($booked_pay_id);
+					echo json_encode(['status' => true, 'pay_status' => true, 'error_msg' => 'Payment successful.', 'booking_id' => $booking_id]);
+					exit;
+				} else {
+					log_message('error', 'EGHL_QR_REPAY_QUERY_FAILED | booking_id=' . $booking_id
+						. ' | booked_pay_id=' . $booked_pay_id
+						. ' | error_code=' . $response_data->msg->OrgResponseCode
+						. ' | message=' . $response_data->msg->OrgResponseMsg
+						. ' | datetime=' . date('Y-m-d H:i:s'));
+					echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Payment failed. Kindly try again.']);
+					exit;
+				}
+			} else {
+				echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Server Down']);
+				exit;
+			}
+		} catch (\Throwable $e) {
+			log_message('error', 'EGHL_QR_REPAY_QUERY_EXCEPTION | booking_id=' . $booking_id
+				. ' | booked_pay_id=' . $booked_pay_id
+				. ' | message=' . $e->getMessage()
+				. ' | datetime=' . date('Y-m-d H:i:s'));
+			echo json_encode(['status' => false, 'pay_status' => false, 'error_msg' => 'Server Down']);
+			exit;
+		}
+	}
+
 	public function partial_account_migration($booked_pay_id)
 	{
 		$succ = true;
