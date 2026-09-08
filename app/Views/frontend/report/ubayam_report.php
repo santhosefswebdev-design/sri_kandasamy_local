@@ -411,18 +411,16 @@
                                 </div>
                             </div>
 
-                            <div class="modal fade" id="repay_qr_modal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
-                                <div class="modal-dialog" role="document">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" style="text-align: center;">Scan to Pay (EGHL)</h5>
-                                        </div>
-                                        <div class="modal-body" style="text-align: center;">
-                                            <p><b>Amount (RM): <span id="repayQrAmount"></span></b></p>
-                                            <img id="repayQrImage" src="" style="max-width: 280px;" alt="EGHL QR Code">
-                                            <p id="repayQrStatusMsg" style="margin-top: 10px;">Waiting for payment...</p>
-                                        </div>
-                                        <div class="modal-footer">
+                            <div id="repay_qr_modal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
+                                <div class="modal-dialog modal-md">
+                                    <div class="modal-content p-4">
+                                        <div class="text-center">
+                                            <h4><img src="<?php echo base_url(); ?>/assets/archanai/images/duitnow.png" alt="DuitNow" style="height:24px; vertical-align:middle;"> <b>DuitNow QR Payment</b></h4>
+                                            <div id="repayQrTimer" style="font-size: 24px; color: #cc0000; margin: 10px 0;">02:00</div>
+                                            <div id="repayQrStatusMsg" style="color: #cc0000; font-weight: bold; ">&nbsp;</div>
+                                            <img src="" id="repayQrImage" style="width: 200px; margin: 10px auto; display: block;" />
+                                            <h5 style="margin-top: 10px; color: #006400; font-weight: bold;"> <p class="mb-0"> Total Amount: RM : <span id="repayQrAmount"></span></p></h5>
+                                            <p style="font-weight: bold;">Please scan the QR Code</p>
                                             <button type="button" class="btn btn-danger" id="repayQrCancel">Cancel</button>
                                         </div>
                                     </div>
@@ -623,6 +621,8 @@
                     $("#repayQrStatusMsg").css("color", "").text('Waiting for payment...');
                     $("#repay_qr_modal").modal('show');
                     window.repayQrAttempts = 0;
+                    window.repayQrExpired = false;
+                    startRepayQrTimer();
                     repayPaymentPoll(obj.booked_pay_id, obj.booking_id);
                 } else if(obj.status){
                     $("#payAmount").val("");
@@ -645,7 +645,37 @@
         });
     });
 
+    var repayQrTimerInterval;
+    function startRepayQrTimer(){
+        window.repayQrSeconds = 120;
+        updateRepayQrTimerDisplay();
+        clearInterval(repayQrTimerInterval);
+        repayQrTimerInterval = setInterval(function(){
+            window.repayQrSeconds--;
+            if (window.repayQrSeconds <= 0) {
+                clearInterval(repayQrTimerInterval);
+                window.repayQrExpired = true;
+                $("#repayQrStatusMsg").css("color", "red").text('Payment timed out. Kindly try again.');
+            } else {
+                updateRepayQrTimerDisplay();
+            }
+        }, 1000);
+    }
+
+    function updateRepayQrTimerDisplay(){
+        var minutes = Math.floor(window.repayQrSeconds / 60);
+        var seconds = window.repayQrSeconds % 60;
+        $("#repayQrTimer").text(('0' + minutes).slice(-2) + ':' + ('0' + seconds).slice(-2));
+    }
+
+    function stopRepayQrTimer(){
+        clearInterval(repayQrTimerInterval);
+    }
+
     function repayPaymentPoll(bookedPayId, bookingId){
+        if (window.repayQrExpired) {
+            return;
+        }
         $.ajax({
             type: "POST",
             url: "<?php echo base_url(); ?>/templeubayam_online/repayment_payment_check",
@@ -654,6 +684,7 @@
                 var obj = JSON.parse(response);
                 console.log(response);
                 if(obj.pay_status){
+                    stopRepayQrTimer();
                     $("#repay_qr_modal").modal('hide');
                     $("#payAmount").val("");
                     $('#alert-modal').modal('show', { backdrop: 'static' });
@@ -665,13 +696,11 @@
                     }, 2000);
                 } else if(obj.status){
                     // still pending
-                    window.repayQrAttempts++;
-                    if (window.repayQrAttempts < 40) {
+                    if (!window.repayQrExpired) {
                         setTimeout(function(){ repayPaymentPoll(bookedPayId, bookingId); }, 5000);
-                    } else {
-                        $("#repayQrStatusMsg").css("color", "red").text('Payment timed out. Kindly try again.');
                     }
                 } else {
+                    stopRepayQrTimer();
                     $("#repayQrStatusMsg").css("color", "red").text(obj.error_msg || 'Payment failed. Kindly try again.');
                     setTimeout(function(){
                         $("#repay_qr_modal").modal('hide');
@@ -680,17 +709,16 @@
                 }
             },
             error: function(){
-                window.repayQrAttempts++;
-                if (window.repayQrAttempts < 40) {
+                if (!window.repayQrExpired) {
                     setTimeout(function(){ repayPaymentPoll(bookedPayId, bookingId); }, 5000);
-                } else {
-                    $("#repayQrStatusMsg").css("color", "red").text('Payment timed out. Kindly try again.');
                 }
             }
         });
     }
 
     $("#repayQrCancel").click(function(){
+        stopRepayQrTimer();
+        window.repayQrExpired = true;
         $("#repay_qr_modal").modal('hide');
         window.location.reload();
     });

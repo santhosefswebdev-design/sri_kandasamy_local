@@ -1379,7 +1379,7 @@ class Report_online extends BaseController
 			}
 
 			if ($row['payment_status'] == 1 && $row['booking_status'] == 1) {
-				$print = '<a class="btn btn-warning btn-rad" title="A4" href="' . base_url() . '/templeubayam_online/print_page_ubayam/' . $row['id'] . '" target="_blank"><i class="fa fa-print"></i> A4 </a>  
+				$print = '<a class="btn btn-warning btn-rad" title="A4" href="' . base_url() . '/templeubayam_online/print_page_ubayam/' . $row['id'] . '" target="_blank"><i class="fa fa-print"></i> A4 </a>
 				
 				<a class="btn btn-primary btn-rad" title="Print" href="' . base_url() . '/templeubayam_online/print_page_ubayam_a5/' . $row['id'] . '" target="_blank" style="display:none"><i class="fa fa-print"></i> </a>
 				<a class="btn btn-success btn-rad" title="Imin" href="' . base_url() . '/templeubayam_online/print_page_ubayam_imin/' . $row['id'] . '" target="_blank"><i class="fa fa-print"></i> Imin </a>
