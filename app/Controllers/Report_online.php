@@ -1414,6 +1414,7 @@ class Report_online extends BaseController
 				date('d-m-Y', strtotime($row['booking_date'])),
 				$row['pname'],
 				$row['name'],
+				!empty($row['tpri_ref_no']) ? $row['tpri_ref_no'] : '-',
 				$row['amount'],
 				$row['paid_amount'],
 				$txt,

@@ -330,9 +330,10 @@
                                                     <th style="width:8%;">Event date</th>
                                                     <th style="width:9%;">Event Name</th>
                                                     <th style="width:12%;">Name</th>
-                                                    <th style="width:10%;">Amount(RM)</th>
-                                                    <th style="width:10%;">Paid Amount(RM)</th>
-                                                    <th style="width:10%;">Status</th>
+                                                    <th style="width:9%;">TPRI Ref No</th>
+                                                    <th style="width:9%;">Amount(RM)</th>
+                                                    <th style="width:9%;">Paid Amount(RM)</th>
+                                                    <th style="width:9%;">Status</th>
                                                     <th style="width:13%;">Action</th>
                                                     <th style="width:8%;">Admin Action</th>
 												</tr>
