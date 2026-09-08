@@ -649,7 +649,7 @@
     </div>
                        
 
-    <div id="qr_modal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true">
+    <div id="qr_modal" class="modal fade" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="static" data-keyboard="false">
         <div class="modal-dialog modal-md">
             <div class="modal-content p-4">
                 <div class="text-center">
@@ -1424,7 +1424,7 @@
                             }
                             window.location.reload(true);
                         }else{
-                            if(window.load_no < 20 && window.paymentSeconds > 0){
+                            if(window.paymentSeconds > 0){
                                 window.load_no++;
                                 setTimeout(function(){
                                     repeat_load(booking_id);
@@ -1485,6 +1485,7 @@
                 var qrMime = (String(qrCodeBase64).substring(0, 5) === 'iVBOR') ? 'image/png' : 'image/jpeg';
                 $(".qr_image").attr('src', 'data:' + qrMime + ';base64,' + qrCodeBase64);
                 $('.total-cart').text(parseFloat(amount).toFixed(2));
+                $('#qr_modal').modal({ backdrop: 'static', keyboard: false });
                 $('#qr_modal').modal('show');
                 startPaymentTimer();
             }
