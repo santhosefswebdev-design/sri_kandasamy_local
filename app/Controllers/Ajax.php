@@ -547,14 +547,17 @@ class Ajax extends BaseController
 			} else {
 				throw new Exception("Missing save_booking parameter.");
 			}
-		} catch (Exception $e) {
+		} catch (\Throwable $e) {
 			$this->db->transRollback(); // Rollback the transaction if an error occurs
 			$resp['success'] = false;
 			$resp['data']['status'] = false;
 			$resp['data']['message'] = $e->getMessage();
 			// $resp['data']['message_type'] = 'error';
-			// log_message('error', $e->getMessage());
-			//throw $e; 
+			log_message('error', 'SAVE_BOOKING_FAILURE | user_id=' . ($this->session->get('log_id') ?? ($request_all_data['user_id'] ?? ''))
+				. ' | message=' . $e->getMessage()
+				. ' | file=' . $e->getFile() . ':' . $e->getLine()
+				. ' | trace=' . $e->getTraceAsString()
+				. ' | request=' . json_encode($request_all_data ?? []));
 		}
 
 		header('Content-Type: application/json; charset=utf-8');
