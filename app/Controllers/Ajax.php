@@ -553,6 +553,12 @@ class Ajax extends BaseController
 			$resp['data']['status'] = false;
 			$resp['data']['message'] = $e->getMessage();
 			// $resp['data']['message_type'] = 'error';
+			$resp['data']['error'] = [
+				'message' => $e->getMessage(),
+				'file' => $e->getFile(),
+				'line' => $e->getLine(),
+				'trace' => $e->getTraceAsString(),
+			];
 			log_message('error', 'SAVE_BOOKING_FAILURE | user_id=' . ($this->session->get('log_id') ?? ($request_all_data['user_id'] ?? ''))
 				. ' | message=' . $e->getMessage()
 				. ' | file=' . $e->getFile() . ':' . $e->getLine()
