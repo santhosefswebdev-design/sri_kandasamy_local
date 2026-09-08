@@ -83,7 +83,7 @@
 
     <div class="sticker">
         <div class="line">
-            <?= 'LM ' . preg_replace('/^LM\s*/i', '', $m['member_no']); ?>
+            <?= $m['member_no']; ?>
         </div>
 
         <div class="line">
@@ -98,13 +98,15 @@
             <div class="line"><?= $m['locality']; ?></div>
         <?php endif; ?>
 
-        <?php if (!empty($m['postal_code'])): ?>
-            <div class="line"><?= $m['postal_code']; ?></div>
+        <?php if (!empty($m['postal_code']) || !empty($m['district'])): ?>
+            <div class="line">
+                <?= trim($m['postal_code'] . (!empty($m['postal_code']) && !empty($m['district']) ? ', ' : '') . $m['district']); ?>
+            </div>
         <?php endif; ?>
 
-        <?php if (!empty($m['district']) || !empty($m['state'])): ?>
+        <?php if (!empty($m['state']) || !empty($m['country'])): ?>
             <div class="line">
-                <?= trim($m['district'] . (!empty($m['district']) && !empty($m['state']) ? ', ' : '') . $m['state']); ?>
+                <?= trim($m['state'] . (!empty($m['state']) && !empty($m['country']) ? ', ' : '') . $m['country']); ?>
             </div>
         <?php endif; ?>
     </div>

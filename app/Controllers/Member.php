@@ -3162,7 +3162,7 @@ member.thithi as "Thithi"
 	public function member_sticker()
     {
         $members = $this->db->table('member')
-            ->select('member_no, prefix, first_name, last_name, house_no_street, postal_code, locality')
+            ->select('member_no, prefix, first_name, last_name, house_no_street, postal_code, locality, district, state, country')
             ->get()
             ->getResultArray();
     
