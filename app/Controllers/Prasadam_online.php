@@ -2174,16 +2174,26 @@ class Prasadam_online extends BaseController
                   'error_msg' => "Thank you for using SMMDT Self Kiosk",
                 ];
                 return json_encode($data);
-              } else {
-                // Update payment_status to 3 = failed
-                $this->db->table('prasadam')->where('id', $booking_id)->update(['payment_status' => 3]);
-
+              } elseif ($rtn['status'] == 'failed') {
+                // Gateway genuinely declined the transaction - safe to close it out.
                 $data = [
                   'status' => true,
                   'pay_status' => false,
                   'order_status' => 'failed',
                   'org_msg' => 'Transaction Failed',
                   'error_msg' => "We’re sorry! your payment is failed. Kindly try again.",
+                ];
+                return json_encode($data);
+              } else {
+                // Still pending, or the gateway couldn't be reached - don't
+                // mark it failed on a guess. Leave payment_status as-is so a
+                // later check can still catch a genuine success.
+                $data = [
+                  'status' => true,
+                  'pay_status' => false,
+                  'order_status' => 'unidentify',
+                  'org_msg' => $rtn['org_msg'] ?? 'Server Down',
+                  'error_msg' => "We’re sorry! we couldn’t confirm your payment status. If payment has been deducted, kindly contact us before rebooking.",
                 ];
                 return json_encode($data);
               }
