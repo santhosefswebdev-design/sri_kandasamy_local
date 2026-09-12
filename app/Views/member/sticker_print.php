@@ -532,16 +532,13 @@
                     <?php if (!empty($all_members)): ?>
                         <?php foreach ($all_members as $m): 
                             $memberName = !empty($m['name']) ? $m['name'] : trim(($m['first_name'] ?? '') . ' ' . ($m['last_name'] ?? ''));
-                            $memberAddress = trim(implode(', ', array_filter([
+                            $memberAddress = trim(implode(' ', array_filter([
                                 $m['house_no_street'] ?? '',
                                 $m['locality'] ?? '',
                                 $m['district'] ?? '',
                                 ($m['postal_code'] ?? '') . ' ' . ($m['state'] ?? ''),
                                 $m['country'] ?? ''
                             ])));
-                            // Clean double commas and trim
-                            $memberAddress = preg_replace('/,\s*,/', ',', $memberAddress);
-                            $memberAddress = trim($memberAddress, ', ');
                         ?>
                             <tr class="member-row" 
                                 data-id="<?= $m['id'] ?>"

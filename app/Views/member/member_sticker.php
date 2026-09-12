@@ -100,13 +100,13 @@
 
         <?php if (!empty($m['postal_code']) || !empty($m['district'])): ?>
             <div class="line">
-                <?= trim($m['postal_code'] . (!empty($m['postal_code']) && !empty($m['district']) ? ', ' : '') . $m['district']); ?>
+                <?= trim($m['postal_code'] . (!empty($m['postal_code']) && !empty($m['district']) ? ' ' : '') . $m['district']); ?>
             </div>
         <?php endif; ?>
 
         <?php if (!empty($m['state']) || !empty($m['country'])): ?>
             <div class="line">
-                <?= trim($m['state'] . (!empty($m['state']) && !empty($m['country']) ? ', ' : '') . $m['country']); ?>
+                <?= trim($m['state'] . (!empty($m['state']) && !empty($m['country']) ? ' ' : '') . $m['country']); ?>
             </div>
         <?php endif; ?>
     </div>
