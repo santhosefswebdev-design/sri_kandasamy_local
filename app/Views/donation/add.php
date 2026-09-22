@@ -37,9 +37,6 @@ if ($edit == true) {
         display: none;
     }
 </style>
-<link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
-<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-
 <section class="content">
     <div class="container-fluid">
         <div class="block-header">
@@ -214,6 +211,15 @@ if ($edit == true) {
                                                 <input type="text" name="description" class="form-control"
                                                     value="<?php echo $data['description']; ?>" <?php echo $readonly; ?>>
                                                 <label class="form-label">Remarks</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <div class="form-group form-float">
+                                            <div class="form-line">
+                                                <input type="text" name="tpri_ref_no" class="form-control"
+                                                    value="<?php echo $data['tpri_ref_no']; ?>" <?php echo $readonly; ?>>
+                                                <label class="form-label">TPRI Ref No</label>
                                             </div>
                                         </div>
                                     </div>

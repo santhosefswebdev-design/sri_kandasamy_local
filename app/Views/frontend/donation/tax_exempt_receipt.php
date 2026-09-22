@@ -204,6 +204,13 @@
                 <span class="field-value"><?php echo $receipt_no; ?></span>
             </div>
 
+            <?php if (!empty($donation['tpri_ref_no'])): ?>
+            <div class="field-row">
+                <span class="field-label">TPRI Ref No:</span>
+                <span class="field-value"><?php echo $donation['tpri_ref_no']; ?></span>
+            </div>
+            <?php endif; ?>
+
             <div class="field-row">
                 <span class="field-label">Diterima daripada<br>Received from:</span>
                 <span class="field-value"><?php echo strtoupper($donation['name']); ?></span>

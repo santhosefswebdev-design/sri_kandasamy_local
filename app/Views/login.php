@@ -74,7 +74,7 @@
 }
 </style>
 <body class="login-page">
-	<?php if($_SESSION['succ'] != '') { ?>
+	<?php if(!empty($_SESSION['succ'])) { ?>
         <div class="row" style="padding: 0 0%;" id="content_alert">
             <div class="suc-alert">
                 <span class="suc-closebtn" onClick="this.parentElement.style.display='none';">&times;</span> 
@@ -82,7 +82,7 @@
             </div>
         </div>
     <?php } ?>
-     <?php if($_SESSION['fail'] != '') { ?>
+     <?php if(!empty($_SESSION['fail'])) { ?>
         <div class="row" style="padding: 0 0%;" id="content_alert">
             <div class="alert">
                 <span class="closebtn" onClick="this.parentElement.style.display='none';">&times;</span> 

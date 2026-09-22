@@ -67,6 +67,7 @@ $db = db_connect();
                                         <tr>
                                             <th>S.No</th>
                                             <th>Ref No</th>
+                                            <th>TPRI Ref No</th>
                                             <th>Name</th>
                                             <th>Mobile Number</th>
                                             <th>Slot</th>
@@ -95,6 +96,7 @@ $db = db_connect();
                                         <tr class="<?php echo $rowClass; ?>">
                                             <td><?php echo $j++; ?></td>
                                             <td><?php echo $row['ref_no']; ?></td>
+                                            <td><?php echo $row['tpri_ref_no']; ?></td>
                                             <td><?php echo $row['name']; ?></td>
                                             <td><?php echo $row['mobile_no']; ?></td>
                                             <td>

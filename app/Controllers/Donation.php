@@ -198,6 +198,7 @@ class Donation extends BaseController
 		}
 
 		$data['description'] = trim($_POST['description']);
+		$data['tpri_ref_no'] = !empty($_POST['tpri_ref_no']) ? trim($_POST['tpri_ref_no']) : null;
 		$data['amount'] = trim($_POST['amount']);
 		$data['target_amount'] = $_POST['targetamt'];
 		$data['collected_amount'] = $_POST['collectedamt'];

@@ -171,6 +171,7 @@ class Donation_online extends BaseController
 		$data['mobile'] = $mble_phonecode . $mble_number;
 		$data['email'] = trim($_POST['email_id']);
 		$data['description'] = trim($_POST['description']);
+		$data['tpri_ref_no'] = !empty($_POST['tpri_ref_no']) ? trim($_POST['tpri_ref_no']) : null;
 		$data['amount'] = trim($_POST['total_amount']);
 		$data['target_amount'] = 0;
 		$data['collected_amount'] = 0;

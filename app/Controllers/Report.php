@@ -2247,6 +2247,7 @@ public function commission_rep_ref()
 			$sheet->setCellValue('C3', 'Pay for');
 			$sheet->setCellValue('D3', 'Name');
 			$sheet->setCellValue('E3', 'Amount');
+			$sheet->setCellValue('F3', 'TPRI Ref No');
 			$rows = 4;
 			$si = 1;
 			$excel_format_data = $this->excel_format_get_cashdonationreport($data['fdate'], $data['tdate'], $data['payfor'], $data['fltername']);
@@ -2258,6 +2259,7 @@ public function commission_rep_ref()
 				$sheet->setCellValue('C' . $rows, $val['pname']);
 				$sheet->setCellValue('D' . $rows, $val['name']);
 				$sheet->setCellValue('E' . $rows, $val['amount']);
+				$sheet->setCellValue('F' . $rows, $val['tpri_ref_no']);
 				$rows++;
 				$si++;
 			}
@@ -2363,7 +2365,8 @@ public function commission_rep_ref()
 				"date" => date('d-m-Y', strtotime($row['date'])),
 				"pname" => $row['pname'],
 				"name" => $row['name'],
-				"amount" => $row['amount']
+				"amount" => $row['amount'],
+				"tpri_ref_no" => $row['tpri_ref_no']
 			);
 		}
 		return $data;

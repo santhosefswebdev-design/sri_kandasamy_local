@@ -89,6 +89,12 @@
                 <th>Donor Name:</th>
                 <td><?= $donation['name'] ?></td>
             </tr>
+            <?php if (!empty($donation['tpri_ref_no'])): ?>
+                <tr>
+                    <th>TPRI Ref No:</th>
+                    <td><?= $donation['tpri_ref_no'] ?></td>
+                </tr>
+            <?php endif; ?>
             <?php if (!empty($donation['mobile_no'])): ?>
                 <tr>
                     <th>Mobile:</th>

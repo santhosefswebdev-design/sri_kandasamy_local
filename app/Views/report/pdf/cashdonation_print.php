@@ -92,8 +92,9 @@ $res_don_set = $db->table('donation_setting ds')->join('donation d', 'ds.id = d.
     <th width="5%">S.No</th>
     <th align="left" width="25%">Pay For</th>
     <th align="left" width="18%">Date</th>
-    <th align="left" width="38%">Name</th>
-    <th align="right" width="19%">Amount</th>
+    <th align="left" width="28%">Name</th>
+    <th align="left" width="15%">TPRI Ref No</th>
+    <th align="right" width="14%">Amount</th>
     </tr>
     </thead>
     <tbody style="background:#c0c0c0;">
@@ -125,6 +126,7 @@ $res_don_set = $db->table('donation_setting ds')->join('donation d', 'ds.id = d.
         <td><?php echo date('d-m-Y', strtotime($row['date'])); ?></td>
         <td><?php echo $row ['pname']; ?></td>
         <td><?php echo $row['name']; ?></td>
+        <td><?php echo $row['tpri_ref_no']; ?></td>
         <td><?php echo number_format($row['amount'], '2','.',','); ?></td>
 	</tr>
     <?php } ?>

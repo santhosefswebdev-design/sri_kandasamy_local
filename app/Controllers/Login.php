@@ -86,11 +86,13 @@ class Login extends BaseController
                  //return redirect()->to('dashboard');
             }else{
                 $this->session->setFlashdata('fail', 'Wrong Username And Password');
-                echo view('/login');
+                $data['data'] = $this->db->table('admin_profile')->get()->getRowArray();
+                echo view('/login', $data);
             }
         }else{
             $this->session->setFlashdata('fail', 'Please Fill Out Username And Password');
-            echo view('/login');
+            $data['data'] = $this->db->table('admin_profile')->get()->getRowArray();
+            echo view('/login', $data);
         }
     }
     public function auto_login($user_id){

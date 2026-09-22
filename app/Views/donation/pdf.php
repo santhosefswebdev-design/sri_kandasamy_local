@@ -131,6 +131,11 @@
 					<p style="text-align:right; line-height:1.7em;"><b>Invoice :</b>
 						<?php echo $qry1['ref_no']; ?>
 					</p>
+					<?php if (!empty($qry1['tpri_ref_no'])): ?>
+					<p style="text-align:right; line-height:1.7em;"><b>TPRI Ref No :</b>
+						<?php echo $qry1['tpri_ref_no']; ?>
+					</p>
+					<?php endif; ?>
 				</td>
 			</tr>
 			<tr>

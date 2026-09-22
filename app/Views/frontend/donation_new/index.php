@@ -406,6 +406,10 @@
                                                     class="form-control" step=".01" value="0.00"
                                                     style="margin-top:20px;font-weight:bold;font-size: 36px;text-align: center;">
 
+                                                <input type="text" name="tpri_ref_no" id="tpri_ref_no"
+                                                    class="form-control" placeholder="TPRI Ref No"
+                                                    autocomplete="off" style="margin-top:10px;">
+
                                                 <ul class="payment1">
                                                 <?php foreach ($payment_mode as $key => $pay) { ?>
                                                     <li>

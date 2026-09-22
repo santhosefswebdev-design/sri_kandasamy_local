@@ -118,6 +118,12 @@
             <td><b>Invoice:</b></td>
             <td><?php echo $data['ref_no']; ?></td>
         </tr>
+        <?php if (!empty($data['tpri_ref_no'])): ?>
+        <tr>
+            <td><b>TPRI Ref No:</b></td>
+            <td><?php echo $data['tpri_ref_no']; ?></td>
+        </tr>
+        <?php endif; ?>
         <tr>
             <td><b>Devotee Name:</b></td>
             <td><?php echo $data['name']; ?></td>
